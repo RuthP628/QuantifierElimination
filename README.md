@@ -1,13 +1,7 @@
-# bachelor_thesis
+## QuantifierElimination
 
-## GitHub configuration
+This is a formalization of the model-theoretic concept of quantifier elimination using the interactive theorem prover Lean, built on top of Lean's mathematical library mathlib.
 
-To set up your new GitHub repository, follow these steps:
+The file `SeparatingTypes.lean` contains a formalization of the Separating Types Theorem, while the file `QuantifierElimination.lean` contains a formalization of the concepts of quantifier elimination as well as a proof of a quantifier elimination criterion using back-and-forth-systems.
 
-* Under your repository name, click **Settings**.
-* In the **Actions** section of the sidebar, click "General".
-* Check the box **Allow GitHub Actions to create and approve pull requests**.
-* Click the **Pages** section of the settings sidebar.
-* In the **Source** dropdown menu, select "GitHub Actions".
-
-After following the steps above, you can remove this section from the README file.
+The file `EmbeddingTests.lean` is still WIP and aims to eventually be a formalization of the standard embedding test for quantifier elimination.
