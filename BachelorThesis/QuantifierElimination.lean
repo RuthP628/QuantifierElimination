@@ -1,6 +1,7 @@
 import Mathlib
 import BachelorThesis.SeparatingTypes
 
+set_option linter.style.header false
 set_option linter.unusedVariables false
 
 open FirstOrder Language Formula
@@ -503,10 +504,10 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
         use (Classical.choice hM₂)
     map_source' := by
       intro x hx
-      simp_all only [Set.mem_setOf_eq, ↓reduceDIte, exists_apply_eq_apply]
+      simp_all
     map_target' := by
       intro x hx
-      simp_all only [Set.mem_setOf_eq, ↓reduceDIte, exists_apply_eq_apply]
+      simp_all
     left_inv' := by
       intro x hx
       have h : ∀ i₁ i₂ : α, a i₁ = a i₂ ↔ b i₁ = b i₂ := by
@@ -528,7 +529,7 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
       · use b (Classical.choose h)
       · rename_i hM₁ hN₁ hM₂ hN₂ _ _
         use (Classical.choice hN₂)) x) = x ) := by
-          simp only [Set.mem_setOf_eq, forall_exists_index, forall_apply_eq_imp_iff,
+          simp only [Set.mem_ofPred_eq, forall_exists_index, forall_apply_eq_imp_iff,
             exists_apply_eq_apply, ↓reduceDIte]
           grind
       tauto
@@ -553,15 +554,15 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
       · use a (Classical.choose h)
       · rename_i hM₁ hN₁ hM₂ hN₂ _ _ _
         use (Classical.choice hM₂)) x)) = x := by
-          simp only [Set.mem_setOf_eq, forall_exists_index, forall_apply_eq_imp_iff,
+          simp only [Set.mem_ofPred_eq, forall_exists_index, forall_apply_eq_imp_iff,
             exists_apply_eq_apply, ↓reduceDIte]
           grind
       tauto
     map_fun' := by
       intro n f v m h
       obtain ⟨ hv, hm ⟩ := h
-      simp only [Set.mem_setOf_eq] at hv
-      simp only [Set.mem_setOf_eq] at hm
+      simp only [Set.mem_ofPred_eq] at hv
+      simp only [Set.mem_ofPred_eq] at hm
       let φ : L.Formula α :=
         BoundedFormula.equal
         (Term.func f (fun x ↦ Term.var (Sum.inl (Classical.choose (hv x)))))
@@ -622,7 +623,7 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
     map_rel' := by
       intro n r v hv
       rename_i hM₁ hN₁ hM₂ hN₂
-      simp only [Set.mem_setOf_eq] at hv
+      simp only [Set.mem_ofPred_eq] at hv
       have hv' : (fun x ↦
       (@dite N (∃ y, a y = x) (Classical.propDecidable (∃ y, a y = x))
       (fun h ↦ b (Classical.choose h)) fun h ↦ Classical.choice hN₂)) ∘ v
@@ -731,8 +732,8 @@ theorem restrictFreeVar_IsQF {n : ℕ} {β : Type*} [DecidableEq α]
         apply IsQF.imp' at h
         obtain ⟨ hf₁, hf₂ ⟩ := h
         refine IsQF.imp ?_ ?_
-        · simp_all only [true_iff, freeVarFinset.eq_4]
-        · simp_all only [true_iff, freeVarFinset.eq_4]
+        · simp_all
+        · simp_all
       · intro h
         apply IsQF.imp' at h
         obtain ⟨ hf₁, hf₂ ⟩ := h
@@ -759,22 +760,22 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
     intro hT α _ φ
     let Sigma : Set (L.Formula α) := { ψ : L.Formula α | ψ.IsQF}
     have closed_conj : ∀ φ ψ, (φ ∈ Sigma) ∧ (ψ ∈ Sigma) →  (φ ⊔ ψ) ∈ Sigma := by {
-      unfold Sigma; simp only [Set.mem_setOf_eq, and_imp]; unfold IsQF
+      unfold Sigma; simp only [Set.mem_ofPred_eq, and_imp]; unfold IsQF
       intro φ ψ hφ hψ
       exact BoundedFormula.IsQF.sup hφ hψ
     }
     have closed_disj : ∀ φ ψ, (φ ∈ Sigma) ∧ (ψ ∈ Sigma) → (φ ⊓ ψ) ∈ Sigma := by {
-      unfold Sigma; simp only [Set.mem_setOf_eq, and_imp]; unfold IsQF
+      unfold Sigma; simp only [Set.mem_ofPred_eq, and_imp]; unfold IsQF
       intro φ ψ hφ hψ
       exact BoundedFormula.IsQF.inf hφ hψ
     }
     have contains_top : ⊤ ∈ Sigma := by
       unfold Sigma; unfold IsQF
-      simp only [Set.mem_setOf_eq]
+      simp only [Set.mem_ofPred_eq]
       exact BoundedFormula.IsQF.top
     have contains_bot : ⊥ ∈ Sigma := by
       unfold Sigma; unfold IsQF
-      simp only [Set.mem_setOf_eq]
+      simp only [Set.mem_ofPred_eq]
       exact BoundedFormula.isQF_bot
     apply (CompleteType.ContainsEquivForumulas_iff_SeparatesTypes T Sigma
       closed_conj closed_disj contains_top contains_bot).2
@@ -785,7 +786,7 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
       intro ψ hψ
       have hψ' : ψ.not ∈ Sigma := by
         unfold Sigma
-        simp only [Set.mem_setOf_eq]
+        simp only [Set.mem_ofPred_eq]
         unfold IsQF
         exact BoundedFormula.IsQF.not hψ
       specialize hpq ψ.not hψ'
@@ -803,13 +804,13 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
     obtain ⟨ M, hM ⟩ := exists_modelType_is_realized_in T p
     obtain ⟨ N, hN ⟩ := exists_modelType_is_realized_in T q
     unfold realizedTypes at hM; unfold realizedTypes at hN
-    unfold Set.range at hM; simp only [Set.mem_setOf_eq] at hM
-    unfold Set.range at hN; simp only [Set.mem_setOf_eq] at hN
+    unfold Set.range at hM; simp only [Set.mem_ofPred_eq] at hM
+    unfold Set.range at hN; simp only [Set.mem_ofPred_eq] at hN
     obtain ⟨ a, ha ⟩ := hM; obtain ⟨ b, hb ⟩ := hN
     specialize hT M N
     have hab : ∀ φ : L.Formula α, φ.IsQF → (φ.Realize a ↔ φ.Realize b) := by
       intro φ hφ
-      have hφ': φ ∈ Sigma := by unfold Sigma; simp_all only [and_imp, ne_eq, Set.mem_setOf_eq]
+      have hφ': φ ∈ Sigma := by unfold Sigma; simp_all
       constructor
       · intro hφ''
         apply (@CompleteType.formula_mem_typeOf L T).2 at hφ''
@@ -829,7 +830,7 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
     have hι : Finite ι.source := by
       unfold ι
       unfold CompleteType.toPartialIso
-      simp_all only [and_imp, ne_eq, Set.coe_setOf]
+      simp_all only [and_imp, ne_eq, Set.coe_ofPred]
       let f : α → (@Subtype ↑M fun y ↦ ∃ x, a x = y ) := fun x ↦ ⟨ a x, by use x ⟩
       have hf : Function.Surjective f := by
         unfold Function.Surjective
@@ -837,14 +838,14 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
         grind
       exact Finite.of_surjective f hf
     have hι' : ι ∈ {f : L.PartialIso M N | Finite f.source} := by
-      simpa only [Set.mem_setOf_eq]
+      simpa
     ext φ
     rw [← ha]
     rw [← hb]
     have ha' : ∀ x : α, a x ∈ ι.source := by
       unfold ι
       unfold CompleteType.toPartialIso
-      simp only [Set.mem_setOf_eq, exists_apply_eq_apply, implies_true]
+      simp
     constructor
     · intro hφ
       apply CompleteType.mem_typeOf.1 at hφ

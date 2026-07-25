@@ -1,1 +1,3 @@
-import BachelorThesis.Basic
+import BachelorThesis.EmbeddingTests
+import BachelorThesis.QuantifierElimination
+import BachelorThesis.SeparatingTypes

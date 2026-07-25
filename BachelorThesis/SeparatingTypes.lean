@@ -1,14 +1,15 @@
-import Mathlib.ModelTheory.Complexity
-import Mathlib.ModelTheory.Types
-import BachelorThesis.SemanticAdditions
+import Mathlib
 
+set_option linter.style.header false
 set_option linter.style.whitespace false
 
 namespace FirstOrder
 namespace Language
 namespace Theory
 
-open FirstOrder Language Formula
+open FirstOrder
+open FirstOrder.Language
+open Formula
 
 noncomputable section SeparatingTypes
 
@@ -44,6 +45,7 @@ lemma modelsBoundedFormula_iff_symm {α : Type*} [Finite α] (T : L.Theory) (φ 
   T ⊨ᵇ (φ.iff ψ) ↔ T ⊨ᵇ (ψ.iff φ) :=
     ⟨ modelsBoundedFormula_iff_symm₁ T φ ψ,  modelsBoundedFormula_iff_symm₁ T ψ φ ⟩
 
+#check Sentence.realize_imp
 
 /- If `T` is an L-theory and `φ` an L-sentence,
 `T ∪ {φ}` models `ψ` if and only if `T` models `φ → ψ`-/
@@ -53,7 +55,7 @@ lemma ext_models_iff_models_imp (T : L.Theory) (φ : L.Sentence) (ψ : L.Sentenc
     · intro hTφ
       apply models_sentence_iff.2
       intro M
-      refine Sentence.realize_imp.mpr ?_
+      apply (Sentence.realize_imp M).2
       intro hM
       have hM' : M.Carrier ⊨ T ∪ {φ} := {
         realize_of_mem := by {
@@ -246,7 +248,8 @@ lemma impliesfiniteconj_if {α : Type w} [Finite α]
     have hTφDelta : ¬ (T_φ ∪ Delta).IsSatisfiable := by {
       by_contra M
       apply Classical.choice at M
-      have _ : (L.lhomWithConstants α).IsExpansionOn M.Carrier := {
+      let _ := M.leftStructure
+      have _ : (L.lhomWithConstants α).IsExpansionOn M := {
         map_onFunction := by tauto
         map_onRelation := by tauto
       }
@@ -273,7 +276,7 @@ lemma impliesfiniteconj_if {α : Type w} [Finite α]
       obtain ⟨ ψ, hψ₁, hψ₂ ⟩ := hSigma
       have hψDelta : (equivSentence ψ).not ∈ Delta := by {
         unfold Delta
-        simp only [Set.mem_setOf_eq]
+        simp only [Set.mem_ofPred_eq]
         use ψ
       }
       have hMψ : M ⊨ (equivSentence ψ).not :=
@@ -356,18 +359,11 @@ lemma impliesfiniteconj_if {α : Type w} [Finite α]
       apply Classical.choice at hχ₂
       let M := hχ₂.Carrier
       have hM := hχ₂.is_model
-      have hM₁ : M ⊨ T_φ := by simp_all only [model_iff, Set.union_singleton, not_exists,
-      Set.Finite.coe_toFinset, Set.mem_insert_iff, forall_eq_or_imp, Sentence.realize_not,
-      not_not, implies_true, and_self, T_φ, Delta, Delta'', Delta', χ, f, M]
-      have hM₂ : M ⊨ ((equivSentence χ).not).not := by simp_all only [model_iff,
-        Set.union_singleton, not_exists, Set.Finite.coe_toFinset, Set.mem_insert_iff,
-        forall_eq_or_imp, Sentence.realize_not, not_not, implies_true,
-        and_self, not_true_eq_false, not_false_eq_true, T_φ, Delta, Delta'', Delta', χ, f, M]
-      have hM₂' : M ⊨ equivSentence χ := by simp_all only [model_iff, not_exists,
-        Set.union_singleton, Sentence.realize_not, not_not]
-      have hM' : M ⊨ (T_φ ∪ {equivSentence χ}) := by simp_all only [model_iff, not_exists,
-        Set.union_singleton, Set.mem_insert_iff, forall_eq_or_imp, Sentence.realize_not, not_not,
-        not_true_eq_false, not_false_eq_true, implies_true, and_self]
+      have hM₁ : M ⊨ T_φ := by simp_all [T_φ, Delta, Delta'', Delta', χ, f, M]
+      have hM₂ : M ⊨ ((equivSentence χ).not).not := by simp_all [T_φ, Delta, Delta'',
+        Delta', χ, f, M]
+      have hM₂' : M ⊨ equivSentence χ := by simp_all
+      have hM' : M ⊨ (T_φ ∪ {equivSentence χ}) := by simp_all
       apply hχ
       unfold IsSatisfiable
       refine Nonempty.intro ?_
@@ -391,7 +387,7 @@ lemma impliesfiniteconj_if {α : Type w} [Finite α]
       unfold Delta' at hx₂
       obtain ⟨ hx₃, hx₄ ⟩ := hx₂
       unfold Delta at hx₄
-      simp only [Set.mem_setOf_eq] at hx₄
+      simp only [Set.mem_ofPred_eq] at hx₄
       obtain ⟨ ψ, hψ₁, hψ₂ ⟩ := hx₄
       use ⟨ ψ, by exact Set.mem_of_subset_of_mem (fun ⦃a⦄ a_1 ↦ a_1) hψ₁ ⟩
       unfold f
@@ -527,7 +523,7 @@ lemma contains_modeled_formulas {α : Type*} [Finite α] (T : L.Theory)
     have hM₂ : ((L.lhomWithConstants α).onTheory T).Model M := Model.mono hM₁ hp₂
     unfold LHom.onTheory at hM₂; unfold LHom.onSentence at hM₂
     have hM₃ : M ⊨ {x | ∃ φ' ∈ T, (L.lhomWithConstants α).onFormula φ' = x} := by {
-      simp only [model_iff, Set.mem_setOf_eq, forall_exists_index, and_imp,
+      simp only [model_iff, Set.mem_ofPred_eq, forall_exists_index, and_imp,
         forall_apply_eq_imp_iff₂]
       intro φ hφ'
       simp only [model_iff, Set.mem_image, forall_exists_index, and_imp,
@@ -731,7 +727,7 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
                 use ψ.not
                 constructor
                 · unfold Sigma'
-                  simp only [Set.mem_setOf_eq]
+                  simp only [Set.mem_ofPred_eq]
                   use ψ
                 · have hq' := q.isMaximal
                   unfold IsMaximal at hq'
@@ -748,7 +744,7 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
           φ ∈ Sigma' ∧ ψ ∈ Sigma' → (φ ⊓ ψ) ∈ Sigma' := by {
             intro φ' ψ' hφ'ψ'
             unfold Sigma' at hφ'ψ'
-            simp only [Set.mem_setOf_eq] at hφ'ψ'
+            simp only [Set.mem_ofPred_eq] at hφ'ψ'
             obtain ⟨ hφ', ψ'', hψ''₁, hψ''₂, hψ'⟩ := hφ'ψ'
             obtain ⟨ φ'', hφ''₁, hφ''₂, hφ'⟩ := hφ'
             unfold Sigma'
@@ -775,7 +771,7 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
               intro x
               have hx : ((Subtype.val ∘ f) x) ∈ Sigma' := by norm_num
               unfold Sigma' at hx
-              simp only [Set.mem_setOf_eq] at hx
+              simp only [Set.mem_ofPred_eq] at hx
               obtain ⟨ ψ, hψ₁, hψ₂, hψ₃ ⟩ := hx
               use ψ
               constructor
@@ -871,7 +867,7 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
         use ψ
         constructor
         · unfold Delta
-          simp only [Set.mem_setOf_eq]
+          simp only [Set.mem_ofPred_eq]
           use q
           use hq
         · have hψ : (equivSentence ψ) ∈ q.toTheory := by unfold ψ; grind
@@ -884,7 +880,7 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
       have hDelta₁ : Delta ⊆ Sigma := by {
           intro χ_p hχ_p
           unfold Delta at hχ_p
-          simp only [Set.mem_setOf_eq] at hχ_p
+          simp only [Set.mem_ofPred_eq] at hχ_p
           obtain ⟨ p, hp, hχ_p ⟩ := hχ_p
           grind only [usr Exists.choose_spec]
         }
@@ -915,7 +911,7 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
         have hx' : (@Function.comp β {x // x ∈ Delta} (L.Formula α) Subtype.val f) x ∈ Delta := by
           norm_num
         unfold Delta at hx'
-        simp only [Set.mem_setOf_eq] at hx'
+        simp only [Set.mem_ofPred_eq] at hx'
         obtain ⟨ p, hp, hx' ⟩ := hx'
         have hx'':
           T ⊨ᵇ ((@Function.comp β {x // x ∈ Delta} (L.Formula α) Subtype.val f) x).imp φ := by

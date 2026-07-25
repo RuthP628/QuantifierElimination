@@ -1,6 +1,7 @@
 import Mathlib
 import BachelorThesis.SeparatingTypes
 
+set_option linter.style.header false
 set_option linter.style.whitespace false
 
 open FirstOrder Language Formula
