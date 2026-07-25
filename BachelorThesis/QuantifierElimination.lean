@@ -918,7 +918,6 @@ theorem HasQE_if_BackAndForth_of_finite {L : Language} (T : L.Theory) :
         apply (BoundedFormula.realize_restrictFreeVar (v ∘ Subtype.val) hv').1 at h
         assumption
 
-
 end Theory
 end Language
 end FirstOrder
