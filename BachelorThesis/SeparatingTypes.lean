@@ -49,7 +49,7 @@ lemma modelsBoundedFormula_iff_symm {α : Type*} [Finite α] (T : L.Theory) (φ 
 
 /- If `T` is an L-theory and `φ` an L-sentence,
 `T ∪ {φ}` models `ψ` if and only if `T` models `φ → ψ`-/
-lemma ext_models_iff_models_imp (T : L.Theory) (φ : L.Sentence) (ψ : L.Sentence) :
+lemma exist_models_iff_models_imp (T : L.Theory) (φ : L.Sentence) (ψ : L.Sentence) :
   (T ∪ {φ}) ⊨ᵇ ψ ↔ T ⊨ᵇ (φ.imp ψ) := by {
     constructor
     · intro hTφ
@@ -374,7 +374,7 @@ lemma impliesfiniteconj_if {α : Type w} [Finite α]
     }
     rw [← equivSentence_not] at hχ₁
     unfold T_φ at hχ₁
-    apply (ext_models_iff_models_imp ((L.lhomWithConstants α).onTheory T)
+    apply (exist_models_iff_models_imp ((L.lhomWithConstants α).onTheory T)
       (equivSentence φ) (equivSentence χ.not)).1 at hχ₁
     unfold χ at hχ₁
     rw [← equivSentence_imp] at hχ₁
