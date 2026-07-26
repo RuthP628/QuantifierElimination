@@ -50,43 +50,48 @@ lemma modelsBoundedFormula_iff_symm {α : Type*} [Finite α] (T : L.Theory) (φ 
 /- If `T` is an L-theory and `φ` an L-sentence,
 `T ∪ {φ}` models `ψ` if and only if `T` models `φ → ψ`-/
 lemma exist_models_iff_models_imp (T : L.Theory) (φ : L.Sentence) (ψ : L.Sentence) :
-  (T ∪ {φ}) ⊨ᵇ ψ ↔ T ⊨ᵇ (φ.imp ψ) := by {
+  (T ∪ {φ}) ⊨ᵇ ψ ↔ T ⊨ᵇ (φ.imp ψ) := by
     constructor
-    · intro hTφ
+    · -- Suppose `T ∪ {φ} ⊨ᵇ ψ`.
+      intro hTφ
+      -- Let `M` be a model of `T`.
       apply models_sentence_iff.2
       intro M
+      -- Suppose `M ⊨ φ`. We need to show `M ⊨ ψ`.
       apply (Sentence.realize_imp M).2
       intro hM
-      have hM' : M.Carrier ⊨ T ∪ {φ} := {
+      -- Since `M ⊨ T` and `M ⊨ φ`, we have `M ⊨ (T ∪ {φ})`.
+      have hM' : M ⊨ T ∪ {φ} := {
         realize_of_mem := by {
           intro φ' hφ'
           obtain hφ'₁ | hφ'₂ := hφ'
           · exact M.is_model.realize_of_mem φ' hφ'₁
           · have this : φ' = φ := ((fun a ↦ hφ'₂) ∘ T) φ
-            rw [this]
-            exact hM
+            rwa [this]
         }
       }
+      -- Hence, by assumption, it follows that `M ⊨ ψ`.
       exact ModelsBoundedFormula.realize_sentence hTφ ↑M
-    · intro hT
+    · -- Now, suppose `T ⊨ᵇ (φ → ψ)`
+      intro hT
+      -- Let `M` be a model of `T ∪ {φ}`. We need to prove `M ⊨ ψ`.
       apply models_sentence_iff.2; apply models_sentence_iff.1 at hT
       intro M
+      -- By assumption, we have `M ⊨ T`...
       have hM : M ⊨ T := {
-        realize_of_mem := by {
+        realize_of_mem := by
           intro φ' hφ'
           exact M.is_model.realize_of_mem φ' (Set.mem_union_left {φ} hφ')
-        }
       }
-      have hM' : M ⊨ φ := by {
+      -- and `M ⊨ φ`.
+      have hM' : M ⊨ φ := by
         have hφ : φ ∈ T ∪ {φ} := Set.mem_union_right T rfl
         exact Model.realize_of_mem φ hφ
-      }
+      -- Therefore, since `T ⊨ᵇ (φ → ψ)`, it follows that `M ⊨ ψ`.
       let M' : T.ModelType := {
         Carrier := M.Carrier
       }
-      specialize hT M'
-      exact (ElementarilyEquivalent.realize_sentence rfl ψ).mp (hT hM')
-  }
+      exact (ElementarilyEquivalent.realize_sentence rfl ψ).mp (hT M' hM')
 
 theorem equivSentence_sup (φ ψ : L.Formula α) :
     equivSentence (φ ⊔ ψ) = equivSentence φ ⊔ equivSentence ψ :=
