@@ -720,6 +720,170 @@ lemma closed_sup {α : Type*} {T : L.Theory} (p : CompleteType T α) {φ ψ : L[
         assumption
   }
 
+/-- Let `Sigma` be a set of `L`-formulas with free variables in `α` that is closed under
+conjunction and disjunction and contains `⊤`.
+Moreover, suppose that for all distinct complete types
+`p`, `q`, there is a formula in `Sigma` separating `p` and `q`.
+Then, for all `L`-formulas `φ` with variables in `α` and for all complete types `p` containing `φ`,
+there is a formula `χ_p ∈ Sigma` s.t. `T ⊨ χ_p → φ`. -/
+-- Note: this is claim 3.5 in the thesis.
+lemma contains_formula_implies {α : Type w} [Finite α] (T : L.Theory)
+  (Sigma : Set (L.Formula α)) (closed_sup : ∀ φ ψ, (φ ∈ Sigma) ∧ (ψ ∈ Sigma) →  (φ ⊔ ψ) ∈ Sigma)
+  (closed_inf : ∀ φ ψ, (φ ∈ Sigma) ∧ (ψ ∈ Sigma) → (φ ⊓ ψ) ∈ Sigma)
+  (contains_top : ⊤ ∈ Sigma) (separation : ∀ p q : T.CompleteType α, p.toTheory ≠ q.toTheory →
+  ∃ ψ : L.Formula α, ψ ∈ Sigma ∧ equivSentence ψ ∈ p.toTheory ∧
+  ¬equivSentence ψ ∈ q.toTheory) :
+    ∀ φ : L.Formula α, ∀ p : T.CompleteType α, (equivSentence φ) ∈ p.toTheory →
+    ∃ χ_p ∈ Sigma, (equivSentence χ_p) ∈ p.toTheory ∧ T ⊨ᵇ χ_p.imp φ := by
+      intro φ p hp₁
+      let Sigma' := {(ψ' : L.Formula α) |
+       ∃ ψ, ψ ∈ Sigma ∧ (equivSentence ψ) ∈ p.toTheory ∧ T.Iff ψ' ψ.not}
+      have hSigma' : ∀ (M : ModelType.{u, v, max (max u v) w} T) (a : α → M.Carrier),
+        (φ.not).Realize a → ∃ ψ ∈ Sigma', ψ.Realize a := by
+          intro M a hφ
+          by_cases hM : Nonempty M
+          · let q := T.typeOf a
+            have hq : equivSentence φ.not ∈ q.toTheory := by
+              unfold q
+              apply formula_mem_typeOf.2
+              assumption
+            have hpq : p.toTheory ≠ q.toTheory := by
+              by_contra hpq'
+              rw [← hpq'] at hq
+              rw [equivSentence_not] at hq
+              have hp := p.isMaximal
+              obtain ⟨ M, hp₂ ⟩ := hp
+              apply Classical.choice at M
+              have hM₁ := M.is_model.realize_of_mem (equivSentence φ) hp₁
+              have hM₂ := M.is_model.realize_of_mem (equivSentence φ).not hq
+              apply realize_not.1 at hM₂
+              contradiction
+            specialize separation p q hpq
+            obtain ⟨ ψ, hψ₁, hψ₂, hψ₃ ⟩ := separation
+            use ψ.not
+            constructor
+            · unfold Sigma'
+              simp only [Set.mem_ofPred_eq]
+              use ψ
+            · have hq' := q.isMaximal
+              unfold IsMaximal at hq'
+              obtain ⟨ hq₁, hq₂ ⟩ := hq'
+              specialize hq₂ (equivSentence ψ)
+              have hq₃ : (equivSentence ψ).not ∈ q.toTheory := Set.mem_preimage.mp hψ₃
+              rw [← equivSentence_not] at hq₃
+              unfold q at hq₃
+              exact formula_mem_typeOf.mp hq₃
+          · simp only [not_nonempty_iff, not_isEmpty_of_nonempty] at hM
+      have hφ := impliesfinitedisj_if T φ.not Sigma' hSigma'
+      have closed_inf' : ∀ (φ ψ : L.Formula α),
+        φ ∈ Sigma' ∧ ψ ∈ Sigma' → (φ ⊓ ψ) ∈ Sigma' := by
+          intro φ' ψ' hφ'ψ'
+          unfold Sigma' at hφ'ψ'
+          simp only [Set.mem_ofPred_eq] at hφ'ψ'
+          obtain ⟨ hφ', ψ'', hψ''₁, hψ''₂, hψ'⟩ := hφ'ψ'
+          obtain ⟨ φ'', hφ''₁, hφ''₂, hφ'⟩ := hφ'
+          unfold Sigma'
+          use φ'' ⊔ ψ''
+          constructor
+          · specialize closed_sup φ'' ψ''
+            apply closed_sup
+            exact ⟨ hφ''₁, hψ''₁ ⟩
+          · constructor
+            · rw [equivSentence_sup]
+              apply (p.closed_sup).2
+              left
+              assumption
+            · intro M v xs
+              specialize hφ' M v xs; specialize hψ' M v xs
+              simp_all only [and_imp, ne_eq, realize_not, BoundedFormula.realize_iff,
+                BoundedFormula.realize_not, BoundedFormula.realize_inf,
+                BoundedFormula.realize_sup, not_or]
+      obtain ⟨ β, f, hφ ⟩ := hφ
+      have h₁ := @not_iSup_iff_iInf_not L β T _ α (Subtype.val ∘ f)
+      have h₂ : ∀ x : β, ∃ ψ ∈ Sigma,
+        equivSentence ψ ∈ p.toTheory ∧ T.Iff ((Subtype.val ∘ f) x).not ψ := by
+          intro x
+          have hx : ((Subtype.val ∘ f) x) ∈ Sigma' := by norm_num
+          unfold Sigma' at hx
+          simp only [Set.mem_ofPred_eq] at hx
+          obtain ⟨ ψ, hψ₁, hψ₂, hψ₃ ⟩ := hx
+          use ψ
+          constructor
+          · exact hψ₁
+          · constructor
+            · exact hψ₂
+            · intro M v xs
+              specialize hψ₃ M v default
+              have hxs : xs = default := List.ofFn_inj.mp rfl
+              rw [hxs]
+              apply realize_iff.2
+              apply realize_iff.1 at hψ₃
+              constructor
+              · intro hf
+                by_contra hψ₄
+                apply realize_not.2 at hψ₄
+                apply hψ₃.2 at hψ₄
+                apply realize_not.1 at hf
+                contradiction
+              · intro hψ
+                apply realize_not.2
+                by_contra hf
+                apply hψ₃.1 at hf
+                apply realize_not.1 at hf
+                contradiction
+      let f' : β → Sigma := fun x ↦ ⟨ Classical.choose (h₂ x), by grind ⟩
+      use (Formula.iInf (Subtype.val ∘ f'))
+      constructor
+      · exact closed_inf_contains_iInf Sigma closed_inf contains_top f'
+      · constructor
+        · have hp := p.isMaximal
+          obtain ⟨ M, hp ⟩ := hp
+          apply Classical.choice at M
+          by_contra hp'
+          specialize hp (equivSentence (Formula.iInf (Subtype.val ∘ f')))
+          have hp'' : (equivSentence (Formula.iInf (Subtype.val ∘ f'))).not ∈ p.toTheory := by
+            tauto
+          have hM :=
+            M.is_model.realize_of_mem (equivSentence (Formula.iInf (Subtype.val ∘ f'))).not hp''
+          apply realize_not.1 at hM
+          apply hM
+          apply (equivSentence_iInf M (Subtype.val ∘ f')).2
+          intro b
+          have hb : equivSentence (f' b) ∈ p.toTheory := by unfold f'; grind
+          have hb' := M.is_model.realize_of_mem (equivSentence (f' b)) hb
+          simpa only [Function.comp_apply]
+        · intro M v xs
+          have hxs : xs = default := List.ofFn_inj.mp rfl
+          rw [hxs]
+          apply realize_imp.1
+          intro hf'
+          have h₃ : Realize (Formula.iInf (fun x ↦ ((Subtype.val ∘ f) x).not)) v := by
+            apply realize_iInf.1 at hf'
+            apply realize_iInf.2
+            intro b
+            specialize hf' b
+            have hb : T.Iff (((Subtype.val ∘ f) b).not) (f' b) := by
+              unfold f'
+              simp only [Function.comp_apply]
+              grind
+            simp only [Function.comp_apply] at hf'
+            specialize hb M v default
+            apply realize_iff.1 at hb
+            apply hb.2
+            assumption
+          have h₄ := not_iSup_iff_iInf_not T (Subtype.val ∘ f)
+          specialize h₄ M v default
+          apply realize_iff.1 at h₄
+          apply h₄.2 at h₃
+          specialize hφ M v default
+          apply realize_imp.1 at hφ
+          by_contra h₅
+          apply realize_not.2 at h₅
+          apply hφ at h₅
+          apply realize_not.1 at h₃
+          contradiction
+
+
 /-- **Separating Types Theorem**
 
 If `Sigma` is a set of `L`-formulas with variables in `α`
@@ -727,6 +891,7 @@ that is closed under conjunction and disjunction
 and contains `⊤` and `⊥`, every `L`-formula with variables in `α`
 is equivalent to a formula from `Sigma`
 if and only if all distinct complete types are separated by a formula in `Sigma`. -/
+-- Note: This is Theorem 3.1 in the thesis
 theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T : L.Theory)
   (Sigma : Set (L.Formula α)) (closed_sup : ∀ φ ψ, (φ ∈ Sigma) ∧ (ψ ∈ Sigma) →  (φ ⊔ ψ) ∈ Sigma)
   (closed_inf : ∀ φ ψ, (φ ∈ Sigma) ∧ (ψ ∈ Sigma) → (φ ⊓ ψ) ∈ Sigma)
@@ -756,162 +921,8 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
           gcongr
     · intro hSigma φ
       have hSigma₁ : ∀ p : T.CompleteType α, (equivSentence φ) ∈ p.toTheory →
-        ∃ χ_p ∈ Sigma, (equivSentence χ_p) ∈ p.toTheory ∧ T ⊨ᵇ χ_p.imp φ := by {
-          intro p hp₁
-          let Sigma' := {(ψ' : L.Formula α) |
-            ∃ ψ, ψ ∈ Sigma ∧ (equivSentence ψ) ∈ p.toTheory ∧ T.Iff ψ' ψ.not}
-          have hSigma' : ∀ (M : ModelType.{u, v, max (max u v) w} T) (a : α → M.Carrier),
-            (φ.not).Realize a → ∃ ψ ∈ Sigma', ψ.Realize a := by {
-              intro M a hφ
-              by_cases hM : Nonempty M
-              · let q := T.typeOf a
-                have hq : equivSentence φ.not ∈ q.toTheory := by {
-                  unfold q
-                  apply formula_mem_typeOf.2
-                  assumption
-                }
-                have hpq : p.toTheory ≠ q.toTheory := by {
-                  by_contra hpq'
-                  rw [← hpq'] at hq
-                  rw [equivSentence_not] at hq
-                  have hp := p.isMaximal
-                  obtain ⟨ M, hp₂ ⟩ := hp
-                  apply Classical.choice at M
-                  have hM₁ := M.is_model.realize_of_mem (equivSentence φ) hp₁
-                  have hM₂ := M.is_model.realize_of_mem (equivSentence φ).not hq
-                  apply realize_not.1 at hM₂
-                  contradiction
-                }
-                specialize hSigma p q hpq
-                obtain ⟨ ψ, hψ₁, hψ₂, hψ₃ ⟩ := hSigma
-                use ψ.not
-                constructor
-                · unfold Sigma'
-                  simp only [Set.mem_ofPred_eq]
-                  use ψ
-                · have hq' := q.isMaximal
-                  unfold IsMaximal at hq'
-                  obtain ⟨ hq₁, hq₂ ⟩ := hq'
-                  specialize hq₂ (equivSentence ψ)
-                  have hq₃ : (equivSentence ψ).not ∈ q.toTheory := Set.mem_preimage.mp hψ₃
-                  rw [← equivSentence_not] at hq₃
-                  unfold q at hq₃
-                  exact formula_mem_typeOf.mp hq₃
-              · simp only [not_nonempty_iff, not_isEmpty_of_nonempty] at hM
-            }
-          have hφ := impliesfinitedisj_if T φ.not Sigma' hSigma'
-          have closed_inf' : ∀ (φ ψ : L.Formula α),
-          φ ∈ Sigma' ∧ ψ ∈ Sigma' → (φ ⊓ ψ) ∈ Sigma' := by {
-            intro φ' ψ' hφ'ψ'
-            unfold Sigma' at hφ'ψ'
-            simp only [Set.mem_ofPred_eq] at hφ'ψ'
-            obtain ⟨ hφ', ψ'', hψ''₁, hψ''₂, hψ'⟩ := hφ'ψ'
-            obtain ⟨ φ'', hφ''₁, hφ''₂, hφ'⟩ := hφ'
-            unfold Sigma'
-            use φ'' ⊔ ψ''
-            constructor
-            · specialize closed_sup φ'' ψ''
-              apply closed_sup
-              exact ⟨ hφ''₁, hψ''₁ ⟩
-            · constructor
-              · rw [equivSentence_sup]
-                apply (p.closed_sup).2
-                left
-                assumption
-              · intro M v xs
-                specialize hφ' M v xs; specialize hψ' M v xs
-                simp_all only [and_imp, ne_eq, realize_not, BoundedFormula.realize_iff,
-                  BoundedFormula.realize_not, BoundedFormula.realize_inf,
-                  BoundedFormula.realize_sup, not_or]
-          }
-          obtain ⟨ β, f, hφ ⟩ := hφ
-          have h₁ := @not_iSup_iff_iInf_not L β T _ α (Subtype.val ∘ f)
-          have h₂ : ∀ x : β, ∃ ψ ∈ Sigma,
-            equivSentence ψ ∈ p.toTheory ∧ T.Iff ((Subtype.val ∘ f) x).not ψ := by {
-              intro x
-              have hx : ((Subtype.val ∘ f) x) ∈ Sigma' := by norm_num
-              unfold Sigma' at hx
-              simp only [Set.mem_ofPred_eq] at hx
-              obtain ⟨ ψ, hψ₁, hψ₂, hψ₃ ⟩ := hx
-              use ψ
-              constructor
-              · exact hψ₁
-              · constructor
-                · exact hψ₂
-                · intro M v xs
-                  specialize hψ₃ M v default
-                  have hxs : xs = default := List.ofFn_inj.mp rfl
-                  rw [hxs]
-                  apply realize_iff.2
-                  apply realize_iff.1 at hψ₃
-                  constructor
-                  · intro hf
-                    by_contra hψ₄
-                    apply realize_not.2 at hψ₄
-                    apply hψ₃.2 at hψ₄
-                    apply realize_not.1 at hf
-                    contradiction
-                  · intro hψ
-                    apply realize_not.2
-                    by_contra hf
-                    apply hψ₃.1 at hf
-                    apply realize_not.1 at hf
-                    contradiction
-          }
-          let f' : β → Sigma := fun x ↦ ⟨ Classical.choose (h₂ x), by grind ⟩
-          use (Formula.iInf (Subtype.val ∘ f'))
-          constructor
-          · exact closed_inf_contains_iInf Sigma closed_inf contains_top f'
-          · constructor
-            · have hp := p.isMaximal
-              obtain ⟨ M, hp ⟩ := hp
-              apply Classical.choice at M
-              by_contra hp'
-              specialize hp (equivSentence (Formula.iInf (Subtype.val ∘ f')))
-              have hp'' : (equivSentence (Formula.iInf (Subtype.val ∘ f'))).not ∈ p.toTheory := by
-                tauto
-              have hM :=
-                M.is_model.realize_of_mem (equivSentence (Formula.iInf (Subtype.val ∘ f'))).not hp''
-              apply realize_not.1 at hM
-              apply hM
-              apply (equivSentence_iInf M (Subtype.val ∘ f')).2
-              intro b
-              have hb : equivSentence (f' b) ∈ p.toTheory := by unfold f'; grind
-              have hb' := M.is_model.realize_of_mem (equivSentence (f' b)) hb
-              simpa only [Function.comp_apply]
-            · intro M v xs
-              have hxs : xs = default := List.ofFn_inj.mp rfl
-              rw [hxs]
-              apply realize_imp.1
-              intro hf'
-              have h₃ : Realize (Formula.iInf (fun x ↦ ((Subtype.val ∘ f) x).not)) v := by {
-                apply realize_iInf.1 at hf'
-                apply realize_iInf.2
-                intro b
-                specialize hf' b
-                have hb : T.Iff (((Subtype.val ∘ f) b).not) (f' b) := by {
-                  unfold f'
-                  simp only [Function.comp_apply]
-                  grind
-                }
-                simp only [Function.comp_apply] at hf'
-                specialize hb M v default
-                apply realize_iff.1 at hb
-                apply hb.2
-                assumption
-              }
-              have h₄ := not_iSup_iff_iInf_not T (Subtype.val ∘ f)
-              specialize h₄ M v default
-              apply realize_iff.1 at h₄
-              apply h₄.2 at h₃
-              specialize hφ M v default
-              apply realize_imp.1 at hφ
-              by_contra h₅
-              apply realize_not.2 at h₅
-              apply hφ at h₅
-              apply realize_not.1 at h₃
-              contradiction
-      }
+        ∃ χ_p ∈ Sigma, (equivSentence χ_p) ∈ p.toTheory ∧ T ⊨ᵇ χ_p.imp φ :=
+          contains_formula_implies T Sigma closed_sup closed_inf contains_top hSigma φ
       let Delta : Set (L.Formula α) := {χ_p | ∃ p : T.CompleteType α,
         ∃ (hp :(equivSentence φ) ∈ p.toTheory), χ_p = Classical.choose (hSigma₁ p hp)}
       have hDelta : ∀ (M : ModelType.{u, v, max (max u v) w} T) (a : α → M.Carrier), φ.Realize a →
