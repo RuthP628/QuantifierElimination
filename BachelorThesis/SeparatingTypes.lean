@@ -934,12 +934,18 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
   ∃ ψ : L.Formula α, ψ ∈ Sigma ∧ equivSentence ψ ∈ p.toTheory ∧
   ¬equivSentence ψ ∈ q.toTheory) := by {
     constructor
-    · intro hSigma p q hpq
+    · -- Suppose for every `L`-formula `φ` with variables in `α`,
+      -- there is an `L`-formula `ψ ∈ Sigma` that is equivalent to `φ` modulo `T`.
+      -- Then, let `p` and `q` be distinct complete types.
+      intro hSigma p q hpq
+      -- Then, there is an `L`-formula `φ` s.t. `φ ∈ p` and `φ ∉ q`.
       apply (types_neq_iff T p q).1 at hpq
       obtain ⟨ φ, hφ₁, hφ₂ ⟩ := hpq
       let φ' := equivSentence.invFun φ
+      -- By assumption, there is `ψ ∈ Sigma` that is equivalent to `φ` (modulo `T`).
       specialize hSigma φ'
       obtain ⟨ ψ, hψ ⟩ := hSigma
+      -- We are going to show that `ψ ∈ p` and `ψ ∉ q`.
       use ψ
       have hφ' : equivSentence φ' = φ := (Equiv.apply_eq_iff_eq_symm_apply equivSentence).mpr rfl
       rw [← hφ'] at hφ₁; rw [← hφ'] at hφ₂
@@ -947,26 +953,44 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
       constructor
       · exact hψ.1
       · constructor
-        · gcongr
-        · by_contra h'
+        · -- Since `ψ` is equivalent to `φ`, it is clear that `ψ ∈ p`.
+          gcongr
+        · -- By the same argument, we get that `ψ ∉ q`.
+          by_contra h'
           apply hφ₂
           apply (contains_equiv T q φ' ψ hψ.2).2
           gcongr
-    · intro hSigma φ
+    · -- Now, suppose that for all distinct complete types `p` and `q`,
+      -- there is `ψ ∈ Sigma` s.t. `ψ ∈ p` and `ψ ∉ q`.
+      -- Let `φ` be an `L`-formula with variables in `α`.
+      -- We are going to show that there is `ψ ∈ Sigma` s.t. `φ` and `ψ`
+      -- are equivalent modulo `T`.
+      intro hSigma φ
+      -- By claim 3.5, for all complete types `p`, there is `χ_p ∈ p ∩ Sigma`
+      -- s.t. `T ⊨ (χ_p → φ)`.
       have hSigma₁ : ∀ p : T.CompleteType α, (equivSentence φ) ∈ p.toTheory →
         ∃ χ_p ∈ Sigma, (equivSentence χ_p) ∈ p.toTheory ∧ T ⊨ᵇ χ_p.imp φ :=
           contains_formula_implies T Sigma closed_sup closed_inf contains_top hSigma φ
+      -- We define `Delta` to be the set of all such `χ_p`s
+      -- (More precisely, `Delta` contains exactly one formula
+      -- `χ_p` for every type `p` containing `φ`).
       let Delta : Set (L.Formula α) := {χ_p | ∃ p : T.CompleteType α,
         ∃ (hp :(equivSentence φ) ∈ p.toTheory), χ_p = Classical.choose (hSigma₁ p hp)}
+      -- Now, let us prove that for every `M ⊨ T` and every `a : α → M` with `M ⊨ φ(a)`,
+      -- there is a `ψ ∈ Delta` with `M ⊨ ψ(a)`:
       have hDelta : ∀ (M : ModelType.{u, v, max (max u v) w} T) (a : α → M.Carrier), φ.Realize a →
-      ∃ ψ ∈ Delta, ψ.Realize a := by {
+      ∃ ψ ∈ Delta, ψ.Realize a := by
+        -- Let `M` and `a` be as above.
         intro M a hφ
+        -- Define `q := tp^M(a)`
         let q := T.typeOf a
-        have hq : equivSentence φ ∈ q.toTheory := by {
+        -- By assumption, `φ ∈ q`.
+        have hq : equivSentence φ ∈ q.toTheory := by
           unfold q
           apply formula_mem_typeOf.2
           assumption
-        }
+        -- By definition of `Delta`, there is a `ψ ∈ Delta` with `ψ ∈ q ∩ Sigma`
+        -- s.t. `T ⊨ (ψ → φ)`.
         let ψ := Classical.choose (hSigma₁ q hq)
         use ψ
         constructor
@@ -974,10 +998,11 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
           simp only [Set.mem_ofPred_eq]
           use q
           use hq
-        · have hψ : (equivSentence ψ) ∈ q.toTheory := by unfold ψ; grind
+        · -- Since `M ⊨ φ(a)` and `q = tp^M(a)`, this means `M ⊨ ψ(a)`.
+          have hψ : (equivSentence ψ) ∈ q.toTheory := by unfold ψ; grind
           unfold q at hψ
           exact formula_mem_typeOf.mp hψ
-      }
+      -- Applying Lemma
       have hDelta'' := impliesfinitedisj_if T φ Delta hDelta
       obtain ⟨ β, f, hDelta'' ⟩ := hDelta''
       let ψ := Formula.iSup (Subtype.val ∘ f)
