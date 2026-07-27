@@ -736,17 +736,23 @@ lemma contains_formula_implies {α : Type w} [Finite α] (T : L.Theory)
     ∀ φ : L.Formula α, ∀ p : T.CompleteType α, (equivSentence φ) ∈ p.toTheory →
     ∃ χ_p ∈ Sigma, (equivSentence χ_p) ∈ p.toTheory ∧ T ⊨ᵇ χ_p.imp φ := by
       intro φ p hp₁
+      -- We define `Sigma' := {¬ψ : ψ ∈ Sigma ∩ p}`.
       let Sigma' := {(ψ' : L.Formula α) |
        ∃ ψ, ψ ∈ Sigma ∧ (equivSentence ψ) ∈ p.toTheory ∧ T.Iff ψ' ψ.not}
+      -- Now, we prove that for all `M ⊨ T` and for all `a : α → M` s,t,
+      -- `M ⊨ ¬φ(a)`, there is an `L`-formula in `Sigma'` s.t. `M ⊨ ψ(a)`.
       have hSigma' : ∀ (M : ModelType.{u, v, max (max u v) w} T) (a : α → M.Carrier),
         (φ.not).Realize a → ∃ ψ ∈ Sigma', ψ.Realize a := by
           intro M a hφ
           by_cases hM : Nonempty M
-          · let q := T.typeOf a
+          · -- First, suppose `M` is nonempty. Then, let `q` be the type of `a`.
+            let q := T.typeOf a
+            -- Note that `¬φ ∈ q` by definition.
             have hq : equivSentence φ.not ∈ q.toTheory := by
               unfold q
               apply formula_mem_typeOf.2
               assumption
+            -- Since `φ ∈ p` by definition, we get `p ≠ q`.
             have hpq : p.toTheory ≠ q.toTheory := by
               by_contra hpq'
               rw [← hpq'] at hq
@@ -758,23 +764,35 @@ lemma contains_formula_implies {α : Type w} [Finite α] (T : L.Theory)
               have hM₂ := M.is_model.realize_of_mem (equivSentence φ).not hq
               apply realize_not.1 at hM₂
               contradiction
+            -- Hence, by assumption, there is a `ψ ∈ Sigma` s.t. `ψ ∈ p` and `ψ ∉ q`.
             specialize separation p q hpq
             obtain ⟨ ψ, hψ₁, hψ₂, hψ₃ ⟩ := separation
+            -- We are going to prove that `¬ψ ∈ Sigma'` and `M ⊨ ¬ψ(a)`.
             use ψ.not
             constructor
-            · unfold Sigma'
+            · -- `¬ψ ∈ Sigma'` holds by definition of `Sigma'`.
+              unfold Sigma'
               simp only [Set.mem_ofPred_eq]
               use ψ
-            · have hq' := q.isMaximal
+            · -- To see that `M ⊨ ¬ψ(a)`, note that `q` is a complete type.
+              -- Therefore, we either have `ψ ∈ q` or `¬ψ ∈ q`.
+              have hq' := q.isMaximal
               unfold IsMaximal at hq'
               obtain ⟨ hq₁, hq₂ ⟩ := hq'
               specialize hq₂ (equivSentence ψ)
+              -- Since we know that `ψ ∉ q`, we get `¬ψ ∈ q`.
               have hq₃ : (equivSentence ψ).not ∈ q.toTheory := Set.mem_preimage.mp hψ₃
               rw [← equivSentence_not] at hq₃
+              -- By definition of `q`, this implies `M ⊨ ¬ψ(a)`.
               unfold q at hq₃
               exact formula_mem_typeOf.mp hq₃
-          · simp only [not_nonempty_iff, not_isEmpty_of_nonempty] at hM
+          · -- If `M` is empty, there is nothing to show.
+            simp only [not_nonempty_iff, not_isEmpty_of_nonempty] at hM
+      -- Applying Lemma 3.3 yields that there are finitely many elements of
+      -- `Sigma'` such that `φ` implies their disjunction.
       have hφ := impliesfinitedisj_if T φ.not Sigma' hSigma'
+      -- Now, note that `Sigma'` is closed under conjunction
+      -- since `p` and `Sigma` are both closed under disjunction.
       have closed_inf' : ∀ (φ ψ : L.Formula α),
         φ ∈ Sigma' ∧ ψ ∈ Sigma' → (φ ⊓ ψ) ∈ Sigma' := by
           intro φ' ψ' hφ'ψ'
@@ -795,11 +813,14 @@ lemma contains_formula_implies {α : Type w} [Finite α] (T : L.Theory)
               assumption
             · intro M v xs
               specialize hφ' M v xs; specialize hψ' M v xs
-              simp_all only [and_imp, ne_eq, realize_not, BoundedFormula.realize_iff,
-                BoundedFormula.realize_not, BoundedFormula.realize_inf,
-                BoundedFormula.realize_sup, not_or]
+              simp_all
       obtain ⟨ β, f, hφ ⟩ := hφ
+      -- Note that modulo `T`, the negation of the disjunction of the
+      -- finitely many elements of `Sigma'` is equivalent to
+      -- the conjunction of their negations.
       have h₁ := @not_iSup_iff_iInf_not L β T _ α (Subtype.val ∘ f)
+      -- By definition of `Sigma'`, for every formula `χ_i` in the finite subset of `Sigma'`,
+      -- there exists a formula `ψ_i ∈ p ∩ Sigma` s.t. `¬χ_i` is equivalent to `ψ_i`.
       have h₂ : ∀ x : β, ∃ ψ ∈ Sigma,
         equivSentence ψ ∈ p.toTheory ∧ T.Iff ((Subtype.val ∘ f) x).not ψ := by
           intro x
@@ -831,12 +852,16 @@ lemma contains_formula_implies {α : Type w} [Finite α] (T : L.Theory)
                 apply hψ₃.1 at hf
                 apply realize_not.1 at hf
                 contradiction
+      -- Now, let `χ_p` be the conjunction of the `ψ_i ∈ Sigma`
+      -- equivalent to the negations of the `χ_i ∈ Sigma'`.
       let f' : β → Sigma := fun x ↦ ⟨ Classical.choose (h₂ x), by grind ⟩
       use (Formula.iInf (Subtype.val ∘ f'))
       constructor
-      · exact closed_inf_contains_iInf Sigma closed_inf contains_top f'
+      · -- Since `Sigma` is closed under conjunction, `χ_p ∈ Sigma`.
+        exact closed_inf_contains_iInf Sigma closed_inf contains_top f'
       · constructor
-        · have hp := p.isMaximal
+        · -- Now, we are going to show `χ_p ∈ p`.
+          have hp := p.isMaximal
           obtain ⟨ M, hp ⟩ := hp
           apply Classical.choice at M
           by_contra hp'
@@ -849,10 +874,14 @@ lemma contains_formula_implies {α : Type w} [Finite α] (T : L.Theory)
           apply hM
           apply (equivSentence_iInf M (Subtype.val ∘ f')).2
           intro b
+          -- Note that all `ψ_i` are in `p`.
           have hb : equivSentence (f' b) ∈ p.toTheory := by unfold f'; grind
+          -- Hence, so is their conjunction.
           have hb' := M.is_model.realize_of_mem (equivSentence (f' b)) hb
-          simpa only [Function.comp_apply]
-        · intro M v xs
+          simpa
+        · -- Finally, we have to prove that `T ⊨ χ_p → φ`:
+          -- Suppose `v ∈ M` realizes `χ_p`.
+          intro M v xs
           have hxs : xs = default := List.ofFn_inj.mp rfl
           rw [hxs]
           apply realize_imp.1
@@ -874,12 +903,16 @@ lemma contains_formula_implies {α : Type w} [Finite α] (T : L.Theory)
           have h₄ := not_iSup_iff_iInf_not T (Subtype.val ∘ f)
           specialize h₄ M v default
           apply realize_iff.1 at h₄
+          -- Then, `v` realizes the negation of the disjunction of the `ψ_i`.
           apply h₄.2 at h₃
+          -- Since `¬φ` implies the disjunction of the `ψ_i`,...
           specialize hφ M v default
           apply realize_imp.1 at hφ
           by_contra h₅
+          -- ...and `v` must either realize `φ` or `¬φ`,...
           apply realize_not.2 at h₅
           apply hφ at h₅
+          -- ... `v` must realize `φ`. This is what we wanted to show.
           apply realize_not.1 at h₃
           contradiction
 
