@@ -49,7 +49,7 @@ lemma modelsBoundedFormula_iff_symm {α : Type*} [Finite α] (T : L.Theory) (φ 
 
 /-- If `T` is an L-theory and `φ` an L-sentence,
 `T ∪ {φ}` models `ψ` if and only if `T` models `φ → ψ`. -/
--- Note: This is Lemma 3.4 in the Thesis
+-- Note: This is Lemma 3.4 in the thesis
 lemma exist_models_iff_models_imp (T : L.Theory) (φ : L.Sentence) (ψ : L.Sentence) :
   (T ∪ {φ}) ⊨ᵇ ψ ↔ T ⊨ᵇ (φ.imp ψ) := by
     constructor
@@ -256,6 +256,7 @@ lemma contraposition {T : L.Theory} (φ ψ : L.Formula α) :
 for every `M ⊨ T` and `a : α → M` that realizes `φ`, there exists an `L`-formula `ψ ∈ Sigma`
 such that `ψ` realizes `Sigma`. Then, there is a finite set of `L`-formulas in `Sigma` s.t.
 in every model of `T`, `φ` implies their disjunction. -/
+-- Note: This is lemma 3.3 in the thesis
 lemma impliesfinitedisj_if {α : Type w} [Finite α]
   (T : L.Theory) (φ : L.Formula α) (Sigma : Set (L.Formula α))
   (hSigma : ∀ (M : ModelType.{u, v, max (max u v) w} T) (a : α → M.Carrier),
@@ -277,10 +278,9 @@ lemma impliesfinitedisj_if {α : Type w} [Finite α]
         have hM : M ⊨ T := {
           realize_of_mem := by
             intro φ' hφ'
-            have hφ'₁ : ((L.lhomWithConstants α).onFormula φ') ∈ T_φ ∪ Delta := by {
+            have hφ'₁ : ((L.lhomWithConstants α).onFormula φ') ∈ T_φ ∪ Delta := by
               unfold T_φ
               aesop
-            }
             apply (LHom.realize_onBoundedFormula (L.lhomWithConstants α) φ').1
             exact M.is_model.realize_of_mem ((L.lhomWithConstants α).onFormula φ') hφ'₁
         }
@@ -345,7 +345,7 @@ lemma impliesfinitedisj_if {α : Type w} [Finite α]
         apply hT0_2
         exact h'
       -- Now, we define `χ` to be the conjunction of all formulas in `Delta''`.
-      have hDelta''₁ : Finite Delta'' := by exact Finite.of_fintype Delta''
+      have hDelta''₁ : Finite Delta'' := Finite.of_fintype Delta''
       let f : Delta'' → L.Formula α := fun x ↦ equivSentence.invFun (x : L[[α]].Sentence)
       let χ : L.Formula α := iInf f
       -- Now, we are going to prove that `T_φ ∪ {χ}` is not satisfiable.
@@ -427,7 +427,7 @@ lemma impliesfinitedisj_if {α : Type w} [Finite α]
         unfold Delta at hx₄
         simp only [Set.mem_ofPred_eq] at hx₄
         obtain ⟨ ψ, hψ₁, hψ₂ ⟩ := hx₄
-        use ⟨ ψ, by exact Set.mem_of_subset_of_mem (fun ⦃a⦄ a_1 ↦ a_1) hψ₁ ⟩
+        use ⟨ ψ, Set.mem_of_subset_of_mem (fun ⦃a⦄ a_1 ↦ a_1) hψ₁ ⟩
         unfold f
         rw [← hψ₂, ← equivSentence_not]
         simp
@@ -453,7 +453,7 @@ lemma impliesfinitedisj_if {α : Type w} [Finite α]
         apply BoundedFormula.realize_imp.1 at hχ₁
         apply hχ₁ at hφ
         -- This is equivalent to realizing the conjunction over `f'`.
-        have hφ' :=  @iSup_iff_not_iInf_not L ↥Delta'' T hDelta''₁ α (Subtype.val ∘ f')
+        have hφ' :=  @iSup_iff_not_iInf_not L Delta'' T hDelta''₁ α (Subtype.val ∘ f')
         specialize hφ' M v xs
         apply BoundedFormula.realize_iff.1 at hφ'
         apply hφ'.2 at hφ
