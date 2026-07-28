@@ -932,7 +932,7 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
   (∀ φ : L.Formula α, ∃ ψ ∈ Sigma, T.Iff φ ψ) ↔
   (∀ p q : T.CompleteType α, p.toTheory ≠ q.toTheory →
   ∃ ψ : L.Formula α, ψ ∈ Sigma ∧ equivSentence ψ ∈ p.toTheory ∧
-  ¬equivSentence ψ ∈ q.toTheory) := by {
+  ¬equivSentence ψ ∈ q.toTheory) := by
     constructor
     · -- Suppose for every `L`-formula `φ` with variables in `α`,
       -- there is an `L`-formula `ψ ∈ Sigma` that is equivalent to `φ` modulo `T`.
@@ -1064,7 +1064,6 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
       · exact hψ₁
       · unfold Theory.Iff
         tauto
-  }
 
 
 end CompleteType
