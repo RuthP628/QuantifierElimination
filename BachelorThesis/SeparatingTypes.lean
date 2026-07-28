@@ -1002,54 +1002,63 @@ theorem ContainsEquivForumulas_iff_SeparatesTypes {α : Type w} [Finite α] (T :
           have hψ : (equivSentence ψ) ∈ q.toTheory := by unfold ψ; grind
           unfold q at hψ
           exact formula_mem_typeOf.mp hψ
-      -- Applying Lemma
+      -- Applying Lemma 3.3 yield that there is a finite subset of `Delta`
+      -- s.t. `¬φ` implies the disjunction of the elements of that subset.
       have hDelta'' := impliesfinitedisj_if T φ Delta hDelta
       obtain ⟨ β, f, hDelta'' ⟩ := hDelta''
+      -- Let `ψ` be the disjunction of the elements of the finite subset of `Delta`
       let ψ := Formula.iSup (Subtype.val ∘ f)
-      have hDelta₁ : Delta ⊆ Sigma := by {
+      -- By definition of `Delta`, we know that `Delta ⊆ Sigma`.
+      have hDelta₁ : Delta ⊆ Sigma := by
           intro χ_p hχ_p
           unfold Delta at hχ_p
           simp only [Set.mem_ofPred_eq] at hχ_p
           obtain ⟨ p, hp, hχ_p ⟩ := hχ_p
-          grind only [usr Exists.choose_spec]
-        }
-      have hψ₁ : ψ ∈ Sigma := by {
+          grind
+      -- Hence, `ψ ∈ Sigma` since `ψ` is a disjunction of finitely many
+      -- elements of `Sigma` and `Sigma` is closed under disjunction.
+      have hψ₁ : ψ ∈ Sigma := by
         unfold ψ
         let f' : β → Sigma := fun x ↦ ⟨ f x , by grind ⟩
         let f'' : β → L.Formula α := Subtype.val ∘ f
         let f''' : β → L.Formula α := Subtype.val ∘ f'
-        have hf' : f''' = f'' := by {
+        have hf' : f''' = f'' := by
           unfold f'''; unfold f''; unfold f'
           ext x
-          simp only [Function.comp_apply]
-        }
+          simp
         unfold f'' at hf'
         rw [← hf']
         unfold f'''
         exact closed_sup_contains_iSup Sigma closed_sup contains_bot f'
-      }
-      have hψ₂ : T ⊨ᵇ ψ.imp φ := by {
+      -- Now, let us prove that `T ⊨ (ψ → φ)`:
+      have hψ₂ : T ⊨ᵇ ψ.imp φ := by
+        -- Let `M ⊨ T` and `a : α → M` be s.t. `M ⊨ ψ(a)`.
         intro M v xs
         have hxs : xs = default := List.ofFn_inj.mp rfl
         rw [hxs]
         apply realize_imp.2
         intro hψ
+        -- Then, there exists a formula `ψ'` in `Delta` s.t. `M ⊨ ψ'(a)`.
         unfold ψ at hψ
         apply realize_iSup.1 at hψ
         obtain ⟨ x, hx ⟩ := hψ
         have hx' : (@Function.comp β {x // x ∈ Delta} (L.Formula α) Subtype.val f) x ∈ Delta := by
           norm_num
+        -- By definition of `Delta`, there is a complete type `p ∋ φ`
+        -- s.t. `ψ' ∈ p ∩ Sigma` and `T ⊨ (ψ' → φ)`.
         unfold Delta at hx'
         simp only [Set.mem_ofPred_eq] at hx'
         obtain ⟨ p, hp, hx' ⟩ := hx'
         have hx'':
           T ⊨ᵇ ((@Function.comp β {x // x ∈ Delta} (L.Formula α) Subtype.val f) x).imp φ := by
             grind
+        -- Since `M ⊨ ψ'`, this implies `M ⊨ φ`.
         specialize hx'' M v default
         apply realize_imp.1 at hx''
         apply hx'' at hx
         assumption
-      }
+      -- Hence, we know that `T ⊨ (φ → ψ)` and `T ⊨ (ψ → φ)`, therefore
+      -- `T ⊨ (ψ → φ)`, which is what we wanted to prove.
       use ψ
       constructor
       · exact hψ₁
