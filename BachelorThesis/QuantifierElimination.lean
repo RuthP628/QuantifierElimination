@@ -46,6 +46,8 @@ structure PartialIso extends (_root_.PartialEquiv M N) where
 
 namespace PartialIso
 
+/-- For two partial isomorphisms `f` and `g`,
+we write `f ≤ g` if `g` extends `f`. -/
 instance : LE (L.PartialIso M N) :=
   ⟨ fun f g ↦ (f.source ⊆ g.source ∧ (∀ x ∈ f.source, f.toFun x = g.toFun x))⟩
 
@@ -53,8 +55,12 @@ theorem le_def (f g : L.PartialIso M N) : f ≤ g ↔
   (f.source ⊆ g.source ∧ (∀ x ∈ f.source, f.toFun x = g.toFun x)) :=
   Iff.rfl
 
+/-- If `f` and `g` are two partial isomorphisms with `f ≤ g`,
+the domain of `f` is a subset of the domain of `g`. -/
 theorem dom_le_dom {f g : L.PartialIso M N} : f ≤ g → f.source ⊆ g.source := fun ⟨le, _⟩ ↦ le
 
+/-- If `f` and `g` are two partial isomorphisms with `f ≤ g`,
+the codomain of `f` is a subset of the codomain of `g`. -/
 theorem cod_le_cod {f g : L.PartialIso M N} : f ≤ g → f.target ⊆ g.target := by
   intro hfg x hx
   apply (le_def M N f g).1 at hfg
@@ -68,6 +74,8 @@ theorem cod_le_cod {f g : L.PartialIso M N} : f ≤ g → f.target ⊆ g.target 
   rw [hfg₂]
   exact PartialEquiv.map_source g.toPartialEquiv (hfg₁ hy)
 
+/-- If `f`, `g` and `h` are partial isomorphisms s.t. `g` extends `f`
+and `h` extends `g`, then `h` extends `f`. -/
 theorem le_trans (f g h : L.PartialIso M N) : f ≤ g → g ≤ h → f ≤ h := by
   rintro ⟨le_fg, eq_fg⟩ ⟨le_gh, eq_gh⟩
   refine ⟨le_fg.trans le_gh, ?_⟩
@@ -79,6 +87,7 @@ theorem le_trans (f g h : L.PartialIso M N) : f ≤ g → g ≤ h → f ≤ h :=
   rw [hx]
   exact hx'
 
+/-- Every partial isomorphism is an extension of itself. -/
 theorem le_refl (f : L.PartialIso M N) : f ≤ f := ⟨le_rfl, by norm_num⟩
 
 end PartialIso
@@ -100,8 +109,11 @@ lemma back_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
     intro hF
     unfold IsBackAndForthSystem at hF
     obtain ⟨ back, forth ⟩ := hF
+    -- We show the statement by induction over the number of elements `n`
+    -- to which we want to extend the domain.
     induction n with
     | zero =>
+      -- If `n = 0`, the statement is trivial.
       simp only [IsEmpty.forall_iff, true_and, forall_const]
       intro f hf
       use f
@@ -109,13 +121,22 @@ lemma back_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
       · exact hf
       · exact PartialIso.le_refl M N f
     | succ =>
+      -- Suppose that for all `f ∈ F` and all `v : Fin n → M`, we can find
+      -- an `f' ∈ F` extending `f` such that all `v(i)` are in the domain of `f'`.
       rename_i n ih
+      -- Now, let `f ∈ F` and `v : Fin (n + 1) → M`.
+      -- We want to show that there is an `f' ∈ F` extending `f` s.t. for all `0 ≤ i ≤ n`,
+      -- `v(i)` is in the domain of `f'`.
       intro f hf v
       let v' : Fin n → M := fun x ↦ v ⟨ x, by norm_num ⟩
+      -- By the IH, there is `g ∈ F` extending `f` s.t. for all `0 ≤ i ≤ n-1`,
+      -- `v(i)` is in the domain of `g`.
       specialize ih f hf v'
       obtain ⟨ g, hg₁, hg₂, hg₃ ⟩ := ih
+      -- Moreover, by `back`, there is `g' ∈ F` extending `g` s.t. `v(n)` is in the domain of `g'`
       let hg₄ := back g hg₁ (v ⟨ n, by norm_num ⟩ )
       obtain ⟨ g', hg'₁, hg'₂, hg'₃ ⟩ := hg₄
+      -- Then, one can easily see that `g'` has the desired property.
       use g'
       constructor
       · assumption
@@ -141,8 +162,11 @@ lemma forth_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
     intro hF
     unfold IsBackAndForthSystem at hF
     obtain ⟨ back, forth ⟩ := hF
+    -- We show the statement by induction over the number of elements `n`
+    -- to which we want to extend the codomain.
     induction n with
     | zero =>
+      -- If `n = 0`, the statement is trivial.
       simp only [IsEmpty.forall_iff, true_and, forall_const]
       intro f hf
       use f
@@ -150,13 +174,23 @@ lemma forth_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
       · exact hf
       · exact PartialIso.le_refl M N f
     | succ =>
+      -- Suppose that for all `f ∈ F` and all `v : Fin n → N`, we can find
+      -- an `f' ∈ F` extending `f` such that all `v(i)` are in the domain of `f'`.
       rename_i n ih
+      -- Now, let `f ∈ F` and `v : Fin (n + 1) → N`.
+      -- We want to show that there is an `f' ∈ F` extending `f` s.t. for all `0 ≤ i ≤ n`,
+      -- `v(i)` is in the codomain of `f'`.
       intro f hf v
       let v' : Fin n → N := fun x ↦ v ⟨ x, by norm_num ⟩
+      -- By the IH, there is `g ∈ F` extending `f` s.t. for all `0 ≤ i ≤ n-1`,
+      -- `v(i)` is in the domain of `g`.
       specialize ih f hf v'
       obtain ⟨ g, hg₁, hg₂, hg₃ ⟩ := ih
+      -- Moreover, by `forth`, there is `g' ∈ F` extending `g`
+      -- s.t. `v(n)` is in the codomain of `g'`
       let hg₄ := forth g hg₁ (v ⟨ n, by norm_num ⟩ )
       obtain ⟨ g', hg'₁, hg'₂, hg'₃ ⟩ := hg₄
+      -- Then, one can easily see that `g'` has the desired property.
       use g'
       constructor
       · assumption
@@ -180,32 +214,45 @@ lemma on_term (F : Set (L.PartialIso M N)) (hF : L.IsBackAndForthSystem M N F) (
   ∀ (v : α → M) (ι : L.PartialIso M N) (hι : ι ∈ F) (hv₁ : ∀ x, v x ∈ ι.source)
   (hv₂ : t.realize v ∈ ι.source) (m : M) (hm : m ∈ ι.source),
   t.realize v = m ↔ t.realize (ι.toFun ∘ v) = ι.toFun m := by
+  -- We show the statement via induction on terms.
   induction t with
   | var =>
+    -- Suppose `t` is a variable symbol.
     intros
     rename_i a v ι hι hv₁ hv₂ m hm
     constructor
-    · simp_all only [Term.realize_var, Function.comp_apply, implies_true]
-    · intro h
+    · -- Then, the only-if-part is trivial.
+      simp_all only [Term.realize_var, Function.comp_apply, implies_true]
+    · -- For the if-part, note that `t.realize (ι.toFun ∘ v) = ι.toFun m` simplifies to
+      -- `∀ x, ι.toFun (v x) = ι.toFun (m)`.
+      intro h
       simp_all only [Term.realize_var, Function.comp_apply]
+      -- Since `ι` is a partial isomorphism, `ι.toFun` is bijective, which proves the goal.
       calc
       v a = ι.invFun (ι.toFun (v a) ) := Eq.symm (ι.left_inv' (hv₁ a))
       _ = ι.invFun (ι.toFun m) := by rw [h]
       _ = m := ι.left_inv' hm
   | func =>
+    -- Now, suppose `t` is of the form `f(ts(0), ..., ts(n-1))` for a function symbol `f ∈ L`
+    -- and terms `ts(0)`, ..., `ts(n-1)` satisfying the statement.
+    -- Then, suppose `t.realize v = m`.
     simp only [Term.realize_func]
     intros
     rename_i l f ts ih v ι hι hv₁ hv₂ m hm
+    -- Then, note that there is an extension `ι' ∈ F` such that `(ts(i)).realize v` is in the
+    -- domain of `ι'` for all `0 ≤ i ≤ n-1`.
     have hι' := back_extends_finite M N F l hF ι hι (fun i ↦ ((ts i).realize v))
     obtain ⟨ ι', hι'₁, hι'₂, hι'₃ ⟩ := hι'
     apply (PartialIso.le_def M N ι ι').1 at hι'₃
     obtain ⟨ hι'₃, hι'₄ ⟩ := hι'₃
+    -- Since `ι'` is a partial isomorphism, it commutes with `f`.
     have hι'₅ := ι'.map_fun' f (fun i ↦ ((ts i).realize v)) m
       ⟨ hι'₂, Set.mem_of_subset_of_mem hι'₃ hm ⟩
     have hv₁' : ∀ x, v x ∈ ι'.source := by tauto
     have hm' : m ∈ ι'.source := Set.mem_of_subset_of_mem hι'₃ hm
     have ih' := fun i ↦ ih i v ι' hι'₁ hv₁' (hι'₂ i) ((ts i).realize v) (hι'₂ i)
     simp only [true_iff] at ih'
+    -- By the induction hypothesis, `ι'` commutes with the interpretation of all `ts(i)`.
     have ih'' : (ι'.toFun ∘ (fun i ↦ ((ts i).realize v)))
       = (fun i ↦ ((ts i).realize (ι'.toFun ∘ v))) := by
         ext i
@@ -213,18 +260,26 @@ lemma on_term (F : Set (L.PartialIso M N)) (hF : L.IsBackAndForthSystem M N F) (
           (Eq.to_iff
               (congrArg (Eq ((↑ι'.toPartialEquiv ∘ fun i ↦ Term.realize v (ts i)) i)) (ih' i))).mpr
             rfl
+    -- Since `ι'` extends `ι`, `ι'(v(x)) = ι(v(x))` for all `x ∈ α`.
     have hι'₆ : ι'.toFun ∘ v = ι.toFun ∘ v := by
       ext x
       simp_all only [Function.comp_apply]
+    -- Moreover, `ι'(m) = ι(m)` since `ι'` extends `ι`.
     have hι'₇ : ι'.toFun m = ι.toFun m := by simp_all only
     constructor
-    · intro h
+    · -- Suppose `t.realize v = m`.
+      intro h
+      -- Then, the arguments above show that `t.realize (ι.toFun ∘ v) = ι.toFun m`,
+      -- which is what we wanted to show.
       apply hι'₅.1 at h
       rw [ih''] at h
       rw [← hι'₆]
       rw [← hι'₇]
       assumption
-    · intro h
+    · -- Suppose `t.realize (ι.toFun ∘ v) = ι.toFun m`.
+      intro h
+      -- Then, by the arguments above, `t.realize v = m` holds only if
+      -- `t.realize (ι.toFun ∘ v) = ι.toFun m`, which is what we wanted to show.
       apply hι'₅.2
       rw [ih'']
       rw [hι'₆]
@@ -239,31 +294,40 @@ theorem on_boundedFormula {n : ℕ} (F : Set (L.PartialIso M N)) (hF : L.IsBackA
   ∀ (v : α → M) (xs : Fin n → M) (ι : L.PartialIso M N) (hι : ι ∈ F) (hv : ∀ x, v x ∈ ι.source)
   (hxs : ∀ x, xs x ∈ ι.source),
   φ.Realize v xs ↔ φ.Realize (ι.toFun ∘ v) (ι.toFun ∘ xs) := by
+    -- We show the statement by induction over formulas.
     induction φ with
     | falsum =>
+      -- If `φ` is `⊥`, the statement is clear.
       intro v xs ι hι hv hxs
       exact Eq.to_iff rfl
     | equal =>
+      -- Suppose `φ` is of the form `t₁ = t₂` for two `L`-terms `t₁, t₂`.
       intros
       rename_i l t₁ t₂ v xs ι hι hv hxs
       have hvxs : ∀ x, (Sum.elim v xs) x ∈ ι.source := by
         simp only [Sum.forall, Sum.elim_inl, Sum.elim_inr]
         exact ⟨ hv, hxs ⟩
+      -- Then, there is `ι' ∈ F` extending `ι` s.t. `t₁^M(v, xs)` is in the domain of `ι'`.
       have hι' := hF.1 ι hι (t₁.realize (Sum.elim v xs))
       obtain ⟨ ι', hι'₁, hι'₂, hι'₃ ⟩ := hι'
+      -- Moreover, there is `ι'' ∈ F` extending `ι'`s.t. `t₂^M(v, xs)` is in the domain  of `ι''`.
       have hι'' := hF.1 ι' hι'₁ (t₂.realize (Sum.elim v xs))
       obtain ⟨ ι'', hι''₁, hι''₂, hι''₃ ⟩ := hι''
       have hι''₄ : t₁.realize (Sum.elim v xs) ∈ ι''.source := by
         have h := (PartialIso.dom_le_dom M N hι''₃)
         exact Set.mem_preimage.mp (h hι'₂)
+      -- Then, `ι''` extends `ι`.
       have hι''₅ : ι ≤ ι'' := PartialIso.le_trans M N ι ι' ι'' hι'₃ hι''₃
       apply (PartialIso.le_def M N ι ι'').1 at hι''₅
       obtain ⟨ hι''₅, hι''₆ ⟩ := hι''₅
       have hι''₇ : ∀ x, (Sum.elim v xs) x ∈ ι''.source := by
         intro x
         exact Set.mem_preimage.mp (hι''₅ (hvxs x))
+      -- By the previous lemma, `ι''` commutes with interpretation of terms.
+      -- Hence, for all `m ∈ M`, ``t₁^M(v, xs) = m ↔ t₁^N(ι ∘ v, ι ∘ xs)`
       have hι''₈ := on_term M N F hF t₁ (Sum.elim v xs)
         ι'' hι''₁ hι''₇ hι''₄ (t₂.realize (Sum.elim v xs)) hι''₂
+      -- Moreover, for all `m ∈ M`, `t₂^M(v, xs) = m ↔ t₂^N(ι ∘ v, ι ∘ xs)`
       have hι''₉ := on_term M N F hF t₂ (Sum.elim v xs)
         ι'' hι''₁ hι''₇ hι''₂ (t₂.realize (Sum.elim v xs)) hι''₂
       simp only [true_iff] at hι''₉
@@ -282,34 +346,48 @@ theorem on_boundedFormula {n : ℕ} (F : Set (L.PartialIso M N)) (hF : L.IsBackA
       rw [hι''₁₁] at hι''₁₀
       rw [hι''₁₂] at hι''₁₀
       constructor
-      · intro ht₁t₂
+      · -- Suppose `M ⊨ φ(v,xs)`.
+        intro ht₁t₂
+        -- This means `t₁^M(v, xs) = t₂^M(v, xs)`.
         apply (BoundedFormula.realize_bdEqual t₁ t₂).1 at ht₁t₂
+        -- Moreover, the goal is equivalent to `t₁^N(ι ∘ v, ι ∘ xs) = t₂^N(ι ∘ v, ι ∘ xs)`
         apply (BoundedFormula.realize_bdEqual t₁ t₂).2
+        -- Since `ι` commutes with interpretation of terms, we are done.
         apply hι''₈.1 at ht₁t₂
         rw [← hι''₉] at ht₁t₂
         rw [hι''₁₀] at ht₁t₂
         assumption
-      · intro ht₁t₂
+      · -- Suppose `N ⊨ φ(ι ∘ v, ι ∘ xs)`.
+        intro ht₁t₂
+        -- This means `t₁^N(ι ∘ v, ι ∘ xs) = t₂^N (ι ∘ v, ι ∘ xs)`.
         apply (BoundedFormula.realize_bdEqual t₁ t₂).2 at ht₁t₂
+        -- Moreover, the goal is equivalent to `t₁^M(v, xs) = t₂^M(v, xs)`
         apply (BoundedFormula.realize_bdEqual t₁ t₂).1
+        -- Since `ι` commutes with interpretation of terms, we are done.
         apply hι''₈.2
         rw [← hι''₉]
         rw [hι''₁₀]
         assumption
     | rel =>
+      -- Suppose `t` is of the form `R(ts(0), ..., ts(l-1))`
+      -- and `ts(0)`, ..., `ts(l-1)` are `L`-terms.
       intros
       rename_i n l R ts v xs ι hι hv hxs
       have hvxs : ∀ x, (Sum.elim v xs) x ∈ ι.source := by
         simp only [Sum.forall, Sum.elim_inl, Sum.elim_inr]
         exact ⟨ hv, hxs ⟩
+      -- Then, there exists `ι' ∈ F` extending `ι`s.t. `(ts i)^M(v,xs)`
+      -- is in the domain of `ι'` for all `0 ≤ i ≤ l-1`.
       have hι' := back_extends_finite M N F l hF ι hι (fun i ↦ (ts i).realize (Sum.elim v xs))
       obtain ⟨ ι', hι'₁, hι'₂, hι'₃ ⟩ := hι'
+      -- Since `ι'` is a partial isomorphism, it commutes with interpretation of `R`...
       have hι'₄ := ι'.map_rel' R (fun i ↦ (ts i).realize (Sum.elim v xs)) hι'₂
       have hvxs' : ∀ x, (Sum.elim v xs) x ∈ ι'.source := by
         intro x
         apply (PartialIso.le_def M N ι ι').1 at hι'₃
         obtain ⟨ hι'₃, hι'₅ ⟩ := hι'₃
         exact Set.mem_preimage.mp (hι'₃ (hvxs x))
+      -- and interpretation of the terms `ts i` for all `0 ≤ i ≤ l-1`.
       have hι'₅ := fun i ↦ on_term M N F hF (ts i) (Sum.elim v xs) ι' hι'₁ hvxs' (hι'₂ i)
         ((ts i).realize (Sum.elim v xs )) (hι'₂ i)
       simp only [true_iff] at hι'₅
@@ -332,21 +410,32 @@ theorem on_boundedFormula {n : ℕ} (F : Set (L.PartialIso M N)) (hF : L.IsBackA
       rw [hι'₈] at hι'₇
       rw [hι'₉] at hι'₇
       constructor
-      · intro h
+      · -- Now, suppose `M ⊨ φ(v, xs)`.
+        intro h
+        -- This means `R^M(ts(0)^M(v, xs), ..., ts(l-1)^M(v,xs))` holds.
         apply BoundedFormula.realize_rel.2
+        -- We want to show `R^N(ts(0)^N(ι ∘ v, ι ∘ xs), ..., ts(l-1)^N(ι ∘ v, ι ∘ xs))` holds
         apply BoundedFormula.realize_rel.1 at h
+        -- Since `ι'` extends `ι` and `ι'` commutes with interpretation
+        -- of `R` and `ts(i)` for all `0 ≤ i ≤ l-1`, we are done.
         apply hι'₄.1 at h
         rw [hι'₆] at h
         rw [hι'₇] at h
         assumption
-      · intro h
+      · -- On the other hand, suppose `N ⊨ φ(ι ∘ v, ι ∘ xs)`
+        intro h
+        -- This means `R^N(ts(0)^N(ι ∘ v, ι ∘ xs), ..., ts(l-1)^N(ι ∘ v, ι ∘ xs))`
         apply BoundedFormula.realize_rel.1
+        -- We want to prove `R^M(ts(0)^M(v, xs), ..., ts(l-1)^M(v,xs))`
         apply BoundedFormula.realize_rel.2 at h
+        -- Since `ι'` extends `ι`and `ι'`commutes with interpretation
+        -- of `R` and `ts(i)` for all `0 ≤ i ≤ l-1`, we are done.
         apply hι'₄.2
         rw [hι'₆]
         rw [hι'₇]
         assumption
     | imp =>
+      -- Now, suppose `φ` is of the form `φ₁ → φ₂` and the statement holds for both `φ₁` and `φ₂`.
       intros
       rename_i n φ₁ φ₂ ih₁ ih₂ v xs ι hι hv hxs
       specialize ih₁ v xs ι hι hv hxs
