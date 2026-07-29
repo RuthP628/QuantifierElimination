@@ -337,12 +337,10 @@ theorem on_boundedFormula {n : ℕ} (F : Set (L.PartialIso M N)) (hF : L.IsBackA
         grind
       have hι''₁₁ : ι''.toFun ∘ v = ι.toFun ∘ v := by
         ext x
-        simp_all only [Function.comp_apply, Sum.forall, Sum.elim_inl, implies_true,
-          Sum.elim_inr, and_self]
+        simp_all
       have hι''₁₂ : ι''.toFun ∘ xs = ι.toFun ∘ xs := by
         ext x
-        simp_all only [Sum.forall, Sum.elim_inl, implies_true, Sum.elim_inr, and_self,
-          Function.comp_apply]
+        simp_all
       rw [hι''₁₁] at hι''₁₀
       rw [hι''₁₂] at hι''₁₀
       constructor
@@ -394,8 +392,7 @@ theorem on_boundedFormula {n : ℕ} (F : Set (L.PartialIso M N)) (hF : L.IsBackA
       have hι'₆ : (ι'.toFun ∘ fun i ↦ Term.realize (Sum.elim v xs) (ts i))
         = (fun i ↦ Term.realize (ι'.toPartialEquiv ∘ Sum.elim v xs) (ts i)) := by
           ext i
-          simp_all only [Function.comp_apply, Sum.forall, Sum.elim_inl, implies_true,
-            Sum.elim_inr, and_self]
+          simp_all
       have hι'₇ : (ι'.toFun ∘ Sum.elim v xs) = Sum.elim (ι'.toFun ∘ v) (ι'.toFun ∘ xs) := by
         ext x
         grind
@@ -441,78 +438,111 @@ theorem on_boundedFormula {n : ℕ} (F : Set (L.PartialIso M N)) (hF : L.IsBackA
       specialize ih₁ v xs ι hι hv hxs
       specialize ih₂ v xs ι hι hv hxs
       constructor
-      · intro h
+      · -- Suppose `M ⊨ φ(v, xs)`.
+        intro h
+        -- Then, we know that `M ⊨ φ₁(v, xs)` implies `M ⊨ φ₂(v,xs)`.
         apply BoundedFormula.realize_imp.1 at h
+        -- We want to prove that `N ⊨ φ₁(ι ∘ v, ι ∘ xs)`
+        -- implies `N ⊨ φ₂(ι ∘ v, ι ∘ xs)`.
         apply BoundedFormula.realize_imp.2
+        -- Suppose `N ⊨ φ₁(ι ∘ v, ι ∘ xs)`
         intro h'
+        -- By the induction hypothesis, this means `M ⊨ φ₁(v, xs)`
         apply ih₁.2 at h'
+        -- Therefore `M ⊨ φ₂(v, xs)`,
         apply h at h'
+        -- hence `N ⊨ φ₂(ι ∘ v, ι ∘ xs)` by induction hypothesis.
         apply ih₂.1
         assumption
-      · intro h
+      · -- Suppose `N ⊨ φ(ι ∘ v, ι ∘ xs)`.
+        intro h
+        -- Hence, `N ⊨ φ₁(ι ∘ v, ι ∘ xs)` implies `N ⊨ φ₂(ι ∘ v, ι ∘ xs)`
         apply BoundedFormula.realize_imp.1 at h
+        -- We want to show `M ⊨ φ₁(v, xs)` implies `M ⊨ φ₂(v, xs)`
         apply BoundedFormula.realize_imp.2
+        -- Suppose `M ⊨ φ₁(v, xs)`.
         intro h'
+        -- Then, by induction hypothesis, this means `N ⊨ φ₁(ι ∘ v, ι ∘ xs)`
         apply ih₁.1 at h'
+        -- Hence, `N ⊨ φ₂(ι ∘ v, ι ∘ xs)`
         apply h at h'
+        -- We can conclude the proof by induction hypothesis.
         apply ih₂.2
         assumption
     | all =>
+      -- Suppose `φ` is of the form `∀ x, φ'` and the statement holds for `φ'`
       intros
-      rename_i n f ih v xs ι hι hv hxs
+      rename_i n φ' ih v xs ι hι hv hxs
       constructor
-      · intro h
+      · -- Suppose `M ⊨ φ(v, xs)`.
+        intro h
+        -- Then, `M ⊨ φ'(v, xs, a)` for all `a ∈ M`.
         apply BoundedFormula.realize_all.1 at h
+        -- We need to prove that for all `b ∈ N`, `N ⊨ φ'(ι ∘ v, ι ∘ xs, b)`.
         apply BoundedFormula.realize_all.2
+        -- Fix `b ∈ N`.
         intro b
+        -- Then, there is a `ι' ∈ F` extending `ι` s.t. `b` is in the codomain of `ι'`
         let hι' := hF.2 ι hι b
         obtain ⟨ ι', hι'₁, hι'₂, hι'₃ ⟩ := hι'
+        -- Let `a` be the preimage of `b`under `ι'`
         let a := ι'.invFun b
+        -- Then, `M ⊨ φ'(v, xs, a)`
         specialize h a
         apply (PartialIso.le_def M N ι ι').1 at hι'₃
         obtain ⟨ hι'₃, hι'₄ ⟩ := hι'₃
         have hι'xs : ι'.toFun ∘ xs = ι.toFun ∘ xs := by
           ext x
-          simp_all only [Nat.succ_eq_add_one, Function.comp_apply]
+          simp_all
         have hι'v : ι'.toFun ∘ v = ι.toFun ∘ v := by
           ext x
-          simp_all only [Nat.succ_eq_add_one, Function.comp_apply]
+          simp_all
         have hv' : ∀ x, v x ∈ ι'.source := by
           intro x
           exact Set.mem_preimage.mp (hι'₃ (hv x))
         have hxs' : ∀ x, ((@Fin.snoc n (fun a ↦ M) xs a) x ∈ ι'.source) := by
           intro x
-          simp [Fin.snoc]
+          simp only [Fin.snoc, Fin.castSucc_castLT, cast_eq]
           aesop
+        -- By the induction hypothesis, this means `N ⊨ φ'(ι' ∘ v, ι' ∘ xs, b)`.
         specialize ih v (@Fin.snoc n (fun a ↦ M) xs a) ι' hι'₁ hv' hxs'
         apply ih.1 at h
+        -- Since `ι'` extends `ι`, we get `N ⊨ φ'(ι ∘ v, ι ∘ xs, b)`,
+        -- which is what we wanted to show.
         have hι'₅ : ι'.toFun ∘ (@Fin.snoc n (fun a ↦ M) xs a) = Fin.snoc (ι'.toFun ∘ xs) b := by
           ext x
           simp_all only [Function.comp_apply, Fin.snoc, Fin.castSucc_castLT, cast_eq,
             PartialEquiv.invFun_as_coe, iff_true, a]
           split
-          next h_1 => simp_all only
-          next h_1 => simp_all only [not_lt, PartialEquiv.right_inv]
+          next h_1 => simp_all
+          next h_1 => simp_all
         rw [hι'₅] at h
         rw [hι'v] at h
         rw [hι'xs] at h
         assumption
-      · intro h
+      · -- Now, suppose `N ⊨ φ(ι ∘ v, ι ∘ xs)`
+        intro h
+        -- This means that for all `b ∈ N`, `N ⊨ φ'(ι ∘ v, ι ∘ xs, b)`
         apply BoundedFormula.realize_all.1 at h
+        -- We want to prove that for all `a ∈ M`, `M ⊨ φ(v, xs, a)`.
         apply BoundedFormula.realize_all.2
+        -- Fix `a ∈ M`.
         intro a
+        -- Then, there is `ι'` extending `ι` such that `a` is in the domain of `ι'`
         let hι' := hF.1 ι hι a
         obtain ⟨ ι', hι'₁, hι'₂, hι'₃ ⟩ := hι'
+        -- We define `b` as the image of `a` under `ι'`.
         let b := ι'.toFun a
         specialize h b
         apply (PartialIso.le_def M N ι ι').1 at hι'₃
         obtain ⟨ hι'₃, hι'₄ ⟩ := hι'₃
+        -- Since `ι'` extends `ι`, we know that `N ⊨ φ'(ι' ∘ v, ι' ∘ xs, b)`.
         have hι'xs : ι'.toFun ∘ xs = ι.toFun ∘ xs := by
           ext x
-          simp_all only [Nat.succ_eq_add_one, Function.comp_apply]
+          simp_all
         have hι'v : ι'.toFun ∘ v = ι.toFun ∘ v := by
           ext x
-          simp_all only [Nat.succ_eq_add_one, Function.comp_apply]
+          simp_all
         rw [← hι'v] at h
         rw [← hι'xs] at h
         have hv' : ∀ x, v x ∈ ι'.source := by
@@ -520,13 +550,15 @@ theorem on_boundedFormula {n : ℕ} (F : Set (L.PartialIso M N)) (hF : L.IsBackA
           exact Set.mem_preimage.mp (hι'₃ (hv x))
         have hxs' : ∀ x, ((@Fin.snoc n (fun a ↦ M) xs a) x ∈ ι'.source) := by
           intro x
-          simp [Fin.snoc]
+          simp only [Fin.snoc, Fin.castSucc_castLT, cast_eq]
           aesop
+        -- By the induction hypothesis, our goal is equivalent to showing
+        -- `N ⊨ φ'(ι' ∘ v, ι' ∘ xs, b)`, which is what we wanted to prove.
         specialize ih v (@Fin.snoc n (fun a ↦ M) xs a) ι' hι'₁ hv' hxs'
         apply ih.2
         have hι'₅ : ι'.toFun ∘ (@Fin.snoc n (fun a ↦ M) xs a) = Fin.snoc (ι'.toFun ∘ xs) b := by
           ext x
-          simp [Fin.snoc]
+          simp only [Function.comp_apply, Fin.snoc, Fin.castSucc_castLT, cast_eq]
           aesop
         rw [hι'₅]
         assumption
