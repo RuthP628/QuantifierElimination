@@ -584,13 +584,17 @@ theorem on_formula (F : Set (L.PartialIso M N)) (hF : L.IsBackAndForthSystem M N
 theorem elementarilyEquivalent_if_exists_nonempty :
   (∃ (F : Set (L.PartialIso M N)), (Nonempty F ∧ (L.IsBackAndForthSystem M N F))) →
   L.ElementarilyEquivalent M N := by {
+    -- Suppose `F` is a nonempty back-and-forth-system between `M` and `N`
     intro h
     obtain ⟨ F, ι, hF ⟩ := h
     apply Classical.choice at ι
+    -- We need to show that for every `L`-sentence `φ`,
+    -- `M ⊨ φ` if and only if `N ⊨ φ`.
     apply elementarilyEquivalent_iff.2
     intro φ
     unfold Sentence at φ
     let v : Empty → M := default
+    -- Since `F` is nonempty, there exists a partial iso `ι' ∈ F`.
     let ι' : L.PartialIso M N := ι
     have hι' : ι' ∈ F := Subtype.coe_prop ι
     have hv : ∀ (x : Empty), v x ∈ ι'.source := by simp only [IsEmpty.forall_iff]
@@ -599,6 +603,7 @@ theorem elementarilyEquivalent_if_exists_nonempty :
     have hv₂ : ι'.toFun ∘ v = default := by ext x; trivial
     rw [← hv₁]
     rw [← hv₂]
+    -- The goal follows from the fact that `ι'` commutes with interpretation of formulas.
     exact on_formula M N F hF φ v ι' hι' hv
   }
 
@@ -613,11 +618,19 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
   L.PartialIso M N where
     source := {y | ∃ x, a x = y}
     target := {y | ∃ x, b x = y}
+    /- `toFun` maps every element of `M` in the image of `a`
+    to the image under `b` of a preimage under `a`. -/
+    -- Note: `a` and `b` are not necessarily injective, so we still
+    -- have to prove that this map does not depend on the choice of the preimage under `a`.
     toFun := fun x ↦ by
       by_cases h : ∃ y, a y = x
       · use b (Classical.choose h)
       · rename_i hM₁ hN₁ hM₂ hN₂
         use (Classical.choice hN₂)
+    /- `invFun` maps every element of `M` in the image of `b`
+    to the image under `a` of a preimage under `b` -/
+    -- Note: Since `a` and `b` are not necessarily injective, it still remains to prove
+    -- that this map does not depend on the choice of the preimage under `b`.
     invFun := fun x ↦ by
       by_cases h : ∃ y, b y = x
       · use a (Classical.choose h)
@@ -630,7 +643,12 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
       intro x hx
       simp_all
     left_inv' := by
+      -- Let `x ∈ M`. We need to prove that if `x` is in the image of `a`,
+      -- then `invFun(toFun(x)) = x`.
       intro x hx
+      -- Since equality of two variables is a quantifier-free formula,
+      -- we know that two elements of `α` have the same image under `a`
+      -- if and only if they have the same image under `b`.
       have h : ∀ i₁ i₂ : α, a i₁ = a i₂ ↔ b i₁ = b i₂ := by
         intro i₁ i₂
         let t₁ : L.Term (α ⊕ (Fin 0)) := var (Sum.inl i₁)
@@ -641,7 +659,10 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
           tauto
         specialize hab φ hφ
         finiteness
-      have h' : ∀ x, x ∈ {y | ∃ x, a x = y} → ((fun (z : N) ↦ by
+      -- Hence, for all `x` in the image of `a`, the image under `b` of
+      -- any preimage under `a` equals `x`.
+      -- This is what we wanted to prove.
+      have h' : ∀ x, x ∈ {y | ∃ x', a x' = y} → ((fun (z : N) ↦ by
         by_cases h : ∃ y, b y = z
         · use a (Classical.choose h)
         · rename_i hM₁ hN₁ hM₂ hN₂ _ _
@@ -655,7 +676,11 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
           grind
       tauto
     right_inv' := by
+      -- Let `x ∈ N` be in the image of `b`.
+      -- We need to prove `toFun(invFun(x)) = x`
       intro x hx
+      -- Again, note that any two elements of `α` have the same image under `a`
+      -- if and only if they have the same image under `b`.
       have h : ∀ i₁ i₂ : α, a i₁ = a i₂ ↔ b i₁ = b i₂ := by
         intro i₁ i₂
         let t₁ : L.Term (α ⊕ (Fin 0)) := var (Sum.inl i₁)
@@ -666,6 +691,7 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
           tauto
         specialize hab φ hφ
         finiteness
+      -- This implies our goal.
       have h' : ∀ x, x ∈ {y | ∃ x, b x = y} → ((fun x ↦ by
       by_cases h : ∃ y, a y = x
       · use b (Classical.choose h)
@@ -680,67 +706,81 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
           grind
       tauto
     map_fun' := by
+      -- Now, we want to prove that `toFun` commutes with interpretation of function symbols.
+      -- Therefore, let `f` be a function symbol and
+      -- `v(0)`, ..., `v(n-1)`, `m` be in the image of `a`.
       intro n f v m h
       obtain ⟨ hv, hm ⟩ := h
       simp only [Set.mem_ofPred_eq] at hv
       simp only [Set.mem_ofPred_eq] at hm
+      -- Now, let `φ` be the formula `f(x₁, ..., xₙ) = x_{n+1}`.
+      -- Here, `x₁, ..., xₙ` are preimages of `v(0)`, ..., `v(n-1)` under `a`
+      -- and `x_{n-1}` is a preimage of `m` under `a`.
       let φ : L.Formula α :=
         BoundedFormula.equal
         (Term.func f (fun x ↦ Term.var (Sum.inl (Classical.choose (hv x)))))
         (Term.var (Sum.inl (Classical.choose hm)))
+      -- Then, `φ` is quantifier-free.
       have hφ : φ.IsQF := by
         unfold IsQF
         tauto
       rename_i hM₁ hN₁ hM₂ hN₂
+      -- Note that `toFun` is indeed meaningfully defined on `m`
       have hm' : (@dite N (∃ y, a y = m) (Classical.propDecidable (∃ y, a y = m))
       (fun h ↦ b (Classical.choose h)) fun h ↦ Classical.choice hN₂)
       = b (Classical.choose hm) := by
         simp_all only [↓reduceDIte]
       rw [hm']
+      -- analogously, note that `toFun` is meaningfully defined on all `v(i)` for `0 ≤ i ≤ n-1`
       have hv' : (fun x ↦
       (@dite N (∃ y, a y = x) (Classical.propDecidable (∃ y, a y = x))
       (fun h ↦ b (Classical.choose h)) fun h ↦ Classical.choice hN₂)) ∘ v
       = (fun i ↦ b (Classical.choose (hv i))) := by
         ext x
-        simp_all only [↓reduceDIte, Function.comp_apply]
+        simp_all
       rw [hv']
+      -- Note that `a(toFun(m))=m`
       have hma : a (Classical.choose hm) = m := by grind
+      -- Moreover, `a(toFun(v(i))) = v(i)` for all `0 ≤ i ≤ n-1`
       have hva : (fun i ↦ a (Classical.choose (hv i))) = v := by
         ext x
         grind
       constructor
-      · intro hf
+      · -- Suppose `f^M(v(0), ..., v(n-1)) = m`.
+        intro hf
+        -- Then, `M ⊨ φ(a)` by definition of `φ`.
         have hφa : φ.Realize a := by
           unfold φ
           apply (BoundedFormula.realize_bdEqual
             (Term.func f (fun x ↦ Term.var (Sum.inl (Classical.choose (hv x)))))
             ((Term.var (Sum.inl (Classical.choose hm))))).2
           simp only [Term.realize_func, Term.realize_var, Sum.elim_inl]
-          rw [hma]
-          rw [hva]
-          assumption
+          rwa [hma, hva]
+        -- Hence, `N ⊨ φ(b)` since `φ` is quantifier-free.
         apply (hab φ hφ).1 at hφa
         unfold φ at hφa
+        -- This implies `f^N(toFun ∘ v) = toFun(m)`, which is what we wanted to show.
         apply (BoundedFormula.realize_bdEqual
           (Term.func f (fun x ↦ Term.var (Sum.inl (Classical.choose (hv x)))))
           ((Term.var (Sum.inl (Classical.choose hm))))).1 at hφa
-        simp only [Term.realize_func, Term.realize_var, Sum.elim_inl] at hφa
-        exact hφa
-      · intro h
+        simp_all
+      · -- On the other hand, suppose `f^N(toFun(v(0)), ..., toFun(v(n-1))) = toFun(m)`.
+        intro h
+        -- Then, by definition of `φ`, we get `N ⊨ φ(b)`
         have hφb : φ.Realize b := by
           unfold φ
           apply (BoundedFormula.realize_bdEqual
             (Term.func f (fun x ↦ Term.var (Sum.inl (Classical.choose (hv x)))))
             ((Term.var (Sum.inl (Classical.choose hm))))).2
-          simp only [Term.realize_func, Term.realize_var, Sum.elim_inl]
-          exact h
+          simpa
+        -- Hence, `M ⊨ φ(a)` since `φ` is quantifier-free
         apply (hab φ hφ).2 at hφb
         unfold φ at hφb
+        -- This implies `f^M(v(0), ..., v(n-1)) = m`, which is what we wanted to prove.
         apply (BoundedFormula.realize_bdEqual
           (Term.func f (fun x ↦ Term.var (Sum.inl (Classical.choose (hv x)))))
           ((Term.var (Sum.inl (Classical.choose hm))))).1 at hφb
-        simp_all only [↓reduceDIte, Term.realize_func, Term.realize_var,
-          Sum.elim_inl]
+        simp_all
     map_rel' := by
       intro n r v hv
       rename_i hM₁ hN₁ hM₂ hN₂
@@ -750,7 +790,7 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
       (fun h ↦ b (Classical.choose h)) fun h ↦ Classical.choice hN₂)) ∘ v
       = (fun i ↦ b (Classical.choose (hv i))) := by
         ext x
-        simp_all only [↓reduceDIte, Function.comp_apply]
+        simp_all
       rw [hv']
       let φ : L.Formula α :=
         BoundedFormula.rel r (fun i ↦ Term.var (Sum.inl (Classical.choose (hv i))))
@@ -764,25 +804,21 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
           unfold φ
           apply BoundedFormula.realize_rel.2
           simp only [Term.realize_var, Sum.elim_inl]
-          rw [hv'']
-          assumption
+          rwa [hv'']
         apply (hab φ hφ).1 at hφa
         unfold φ at hφa
         apply BoundedFormula.realize_rel.1 at hφa
-        simp only [Term.realize_var, Sum.elim_inl] at hφa
-        assumption
+        simp_all
       · intro h
         have hφb : φ.Realize b := by
           unfold φ
           apply BoundedFormula.realize_rel.2
-          simp only [Term.realize_var, Sum.elim_inl]
-          assumption
+          simpa
         apply (hab φ hφ).2 at hφb
         unfold φ at hφb
         apply BoundedFormula.realize_rel.1 at hφb
         simp only [Term.realize_var, Sum.elim_inl] at hφb
-        rw [← hv'']
-        assumption
+        rwa [← hv'']
 
 /-- `toPartialIso a b hab` maps `a` to `b`. -/
 lemma toPartialIso_def [Nonempty M] [Nonempty N]
