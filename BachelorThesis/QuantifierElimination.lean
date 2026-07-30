@@ -923,13 +923,20 @@ end BoundedFormula
 
 namespace Theory
 
+/-- If for all models `M` and `N` of a theory `T`,
+the set of partial isomorphisms with finite domain between `M` and `N` is a back-and-forth system,
+then every `L`-formula with free variables in a finite type `α`
+is equivalent to a quantifier-free formula. -/
 theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) :
   (∀ M N : ModelType.{u, v, max u v} T,
   L.IsBackAndForthSystem M N {f : L.PartialIso M N | Finite f.source})
   → ∀ (α : Type u) (_ : Finite α) (φ : L.Formula α),
   ∃ ψ : L.Formula α, (ψ.IsQF ∧ T ⊨ᵇ (φ.iff ψ)) := by {
+    -- Let `α` be a finite type and `φ` be a formula with variables in `α`.
     intro hT α _ φ
+    -- Moreover, let `Sigma` be the set of quantifier-free formulas with variables in `α`.
     let Sigma : Set (L.Formula α) := { ψ : L.Formula α | ψ.IsQF}
+    -- Note that `Sigma` is closed under conjunction and disjunction of formulas and `⊤, ⊥ ∈ Sigma`.
     have closed_conj : ∀ φ ψ, (φ ∈ Sigma) ∧ (ψ ∈ Sigma) →  (φ ⊔ ψ) ∈ Sigma := by {
       unfold Sigma; simp only [Set.mem_ofPred_eq, and_imp]; unfold IsQF
       intro φ ψ hφ hψ
@@ -948,11 +955,17 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
       unfold Sigma; unfold IsQF
       simp only [Set.mem_ofPred_eq]
       exact BoundedFormula.isQF_bot
+    -- Hence, by the separating types theorem, it suffices to show that any distinct
+    -- complete types `p`, `q` over `T` with variables in `α`
+    -- are separated by a formula in `Sigma`
     apply (CompleteType.ContainsEquivForumulas_iff_SeparatesTypes T Sigma
       closed_conj closed_disj contains_top contains_bot).2
+    -- Let `p`, `q` be distinct complete types with formulas in `α`.
+    -- Suppose there is no `ψ ∈ Sigma` s.t. `ψ ∈ p` and `ψ ∉ q`.
     by_contra h
     push Not at h
     obtain ⟨ p, q, hpq₁, hpq⟩ := h
+    -- Then, every `L`-formula `ψ ∈ Sigma` that is in `q` is also in `p`.
     have hpq' : ∀ ψ ∈ Sigma, equivSentence ψ ∈ q → equivSentence ψ ∈ p := by
       intro ψ hψ
       have hψ' : ψ.not ∈ Sigma := by
@@ -972,13 +985,17 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
         (CompleteType.not_mem_iff q (equivSentence ψ)).mp hψp'
       contradiction
     apply hpq₁
+    -- Consider `M, N ⊨ T` s.t. `p` is realized in `M` and `q` is realized in `N`.
     obtain ⟨ M, hM ⟩ := exists_modelType_is_realized_in T p
     obtain ⟨ N, hN ⟩ := exists_modelType_is_realized_in T q
     unfold realizedTypes at hM; unfold realizedTypes at hN
     unfold Set.range at hM; simp only [Set.mem_ofPred_eq] at hM
     unfold Set.range at hN; simp only [Set.mem_ofPred_eq] at hN
+    -- Let `a : α → M` be a realization of `p` and `b : α → N` be a realization of `q`.
     obtain ⟨ a, ha ⟩ := hM; obtain ⟨ b, hb ⟩ := hN
     specialize hT M N
+    -- Then, for every quantifier-free formula `φ` with variables in `α`,
+    -- `M ⊨ φ(a)` if and only if `N ⊨ φ(b)`.
     have hab : ∀ φ : L.Formula α, φ.IsQF → (φ.Realize a ↔ φ.Realize b) := by
       intro φ hφ
       have hφ': φ ∈ Sigma := by unfold Sigma; simp_all
@@ -997,7 +1014,9 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
         rw [← ha] at hpq'
         apply (@CompleteType.formula_mem_typeOf L T).1 at hpq'
         assumption
+    -- Hence, there is a partial isomorphism `ι` sending `a` to `b`.
     let ι := CompleteType.toPartialIso M N a b hab
+    -- Then, `ι` is a partial isomorphism between `M` and `N` with finite domain.
     have hι : Finite ι.source := by
       unfold ι
       unfold CompleteType.toPartialIso
@@ -1010,6 +1029,8 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
       exact Finite.of_surjective f hf
     have hι' : ι ∈ {f : L.PartialIso M N | Finite f.source} := by
       simpa
+    -- Now, let `φ` be an arbitrary `L`-formula with variables in `α`.
+    -- We need to show that `φ ∈ tp^M(a)` if and only if `φ ∈ tp^N(b)`.
     ext φ
     rw [← ha]
     rw [← hb]
@@ -1018,23 +1039,37 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
       unfold CompleteType.toPartialIso
       simp
     constructor
-    · intro hφ
+    · -- Suppose `φ ∈ tp^M(a)`.
+      intro hφ
+      -- Then `M ⊨ φ(a)`
       apply CompleteType.mem_typeOf.1 at hφ
+      -- We need to prove `N ⊨ φ(b)`
       apply CompleteType.mem_typeOf.2
+      -- Since the set of partial isomorphisms with finite domain between `M` and `N`
+      -- is a back-and-forth-system and contains `ι`, we have `M ⊨ φ(a)`
+      -- if and only if `N ⊨ φ(ι ∘ a)`
       have h := BackAndForth.on_formula M N {f : L.PartialIso M N | Finite f.source}
         hT (equivSentence.symm φ) a ι hι ha'
       apply h.1 at hφ
       unfold ι at hφ
+      -- Since `ι ∘ a = b` by definition of `ι`, this concludes the proof.
       have hab' := CompleteType.toPartialIso_def M N a b hab
       rw [hab'] at hφ
       assumption
-    · intro hφ
+    · -- Now, suppose `φ ∈ tp^N(b)`
+      intro hφ
+      -- Then `N ⊨ φ(b)`
       apply CompleteType.mem_typeOf.1 at hφ
+      -- We need to prove `M ⊨ φ(a)`.
       apply CompleteType.mem_typeOf.2
+      -- Since the set of partial isomorphisms with finite domain between `M` and `N`
+      -- is a back-and-forth-system and contains `ι`, we have `M ⊨ φ(a)`
+      -- if and only if `N ⊨ φ(ι ∘ a)`
       have h := BackAndForth.on_formula M N {f : L.PartialIso M N | Finite f.source}
         hT (equivSentence.symm φ) a ι hι ha'
       apply h.2
       unfold ι
+      -- Since `ι ∘ a = b` by definition of `ι`, this concludes the proof.
       have hab' := CompleteType.toPartialIso_def M N a b hab
       rw [hab']
       assumption
@@ -1047,26 +1082,36 @@ theorem HasQE_if_BackAndForth_of_finite {L : Language} (T : L.Theory) :
   (∀ M N : ModelType.{u, v, max u v} T,
   L.IsBackAndForthSystem M N {f : L.PartialIso M N | Finite f.source})
   → T.HasQE := by
+    -- Let `φ` be an arbitrary `L`-formula with variables in a type `α` with decidable equality.
     unfold HasQE
     intro hT α _ φ
     have h₁ : @SetLike.coe (Finset α) α Finset.instSetLike φ.freeVarFinset
       ⊆ @SetLike.coe (Finset α) α Finset.instSetLike φ.freeVarFinset := by trivial
     let f := Set.inclusion h₁
+    -- Let `φ` be the `L`-formula `φ`, considered as an `L`-formula with variables in the
+    -- finite set of free variables that occur in `φ`.
     let φ' : L.Formula (φ.freeVarFinset) := φ.restrictFreeVar f
     have hα' : Finite (BoundedFormula.freeVarFinset φ) :=
-      Finite.of_fintype ↥(BoundedFormula.freeVarFinset φ)
+      Finite.of_fintype (BoundedFormula.freeVarFinset φ)
+    -- By the previous theorem, there is a quantifier-free `L`-formula `ψ` with variables in the
+    -- finite set of free variables occuring in `φ` that is equivalent to `φ'` modulo `T`.
     have hφ' := HasQE_on_finite_if_BackAndForth_of_finite T hT
       (BoundedFormula.freeVarFinset φ) hα' φ'
     obtain ⟨ ψ, hψ₁, hψ₂ ⟩ := hφ'
     have _ : DecidableEq (BoundedFormula.freeVarFinset φ) := instDecidableEqOfLawfulBEq
     let f' : ψ.freeVarFinset → α := fun x ↦ x
+    -- Let `ψ'` be `ψ`, considered as an `L`-formula with variables in `α`.
     let ψ' : L.Formula α := ψ.restrictFreeVar f'
     use ψ'
     constructor
-    · unfold ψ'
+    · -- `ψ'` is quantifier-free since `ψ` is quantifier-free by assumption.
+      unfold ψ'
       apply (BoundedFormula.restrictFreeVar_IsQF ψ f').1
       assumption
-    · intro M v xs
+    · -- It remains to show that `φ` and `ψ'`are equivalent modulo `T`.
+      -- Therefore, let `M` be a model of `T` and `v : α → M`.
+      intro M v xs
+      -- We need to prove `M ⊨ φ(v)` if and only if `M ⊨ ψ'(v)`.
       rw [BoundedFormula.realize_iff]
       have hv' : ∀ (a : (@Subtype (φ.freeVarFinset) fun x ↦ x ∈ ψ.freeVarFinset)),
         v (f' a) = (@Function.comp (↥(BoundedFormula.freeVarFinset φ)) α (M) v Subtype.val) a := by
@@ -1074,19 +1119,30 @@ theorem HasQE_if_BackAndForth_of_finite {L : Language} (T : L.Theory) :
           unfold f'
           simp only [Function.comp_apply]
       unfold φ' at hψ₂
+      -- By construction of `φ'` and `ψ`, `M ⊨ φ'(v')` holds if and only if `M ⊨ ψ(v')`.
+      -- Here, `v'` is the restriction of `v` to the variables in `α`
+      -- that actually occur as free variables in `φ`.
       specialize hψ₂ M (v ∘ Subtype.val) xs
       rw [BoundedFormula.realize_iff] at hψ₂
       constructor
-      · intro h
+      · -- Suppose `M ⊨ φ(v)`.
+        intro h
         unfold ψ'
+        -- Then, `M ⊨ φ'(v')` by definition of `φ'`.
         apply (BoundedFormula.realize_restrictFreeVar' h₁).2 at h
+        -- Therefore, `M ⊨ ψ(v')`,
         apply hψ₂.1 at h
+        -- which implies `M ⊨ ψ'(v)`, which is what we wanted to show.
         apply (BoundedFormula.realize_restrictFreeVar (v ∘ Subtype.val) hv').2
         assumption
-      · intro h
+      · -- On the other hand, suppose `M ⊨ ψ'(v)`.
+        intro h
+        -- Then, `M ⊨ ψ(v')` by definition of `ψ'`
         unfold ψ' at h
         apply (BoundedFormula.realize_restrictFreeVar' h₁).1
+        -- Hence, `M ⊨ φ'(v')`,
         apply hψ₂.2
+        -- which means `M ⊨ φ(v)` by definition of `φ'`.
         apply (BoundedFormula.realize_restrictFreeVar (v ∘ Subtype.val) hv').1 at h
         assumption
 
