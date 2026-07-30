@@ -707,7 +707,7 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
       tauto
     map_fun' := by
       -- Now, we want to prove that `toFun` commutes with interpretation of function symbols.
-      -- Therefore, let `f` be a function symbol and
+      -- Therefore, let `f` be an `n`-ary function symbol and
       -- `v(0)`, ..., `v(n-1)`, `m` be in the image of `a`.
       intro n f v m h
       obtain ⟨ hv, hm ⟩ := h
@@ -739,9 +739,7 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
         ext x
         simp_all
       rw [hv']
-      -- Note that `a(toFun(m))=m`
       have hma : a (Classical.choose hm) = m := by grind
-      -- Moreover, `a(toFun(v(i))) = v(i)` for all `0 ≤ i ≤ n-1`
       have hva : (fun i ↦ a (Classical.choose (hv i))) = v := by
         ext x
         grind
@@ -782,9 +780,14 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
           ((Term.var (Sum.inl (Classical.choose hm))))).1 at hφb
         simp_all
     map_rel' := by
+      -- Next, we are going to prove that `toFun` commutes with
+      -- interpretation of relation symbols.
+      -- Hence, let `r` be an `n`-ary relation symbol in `L` and
+      -- `v(0)`, ..., `v(n-1)` be in the image of `a`.
       intro n r v hv
       rename_i hM₁ hN₁ hM₂ hN₂
       simp only [Set.mem_ofPred_eq] at hv
+      -- Then, `toFun v(i)` is meaningfully defined for all `0 ≤ i ≤ n-1`.
       have hv' : (fun x ↦
       (@dite N (∃ y, a y = x) (Classical.propDecidable (∃ y, a y = x))
       (fun h ↦ b (Classical.choose h)) fun h ↦ Classical.choice hN₂)) ∘ v
@@ -792,29 +795,40 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
         ext x
         simp_all
       rw [hv']
+      -- Let `φ` be the `L`-formula `r(x₁, ..., xₙ)`, where
+      -- `x₁`, ..., `xₙ` are preimages of `v(0)`, ..., `v(n-1)` under `a`.
       let φ : L.Formula α :=
         BoundedFormula.rel r (fun i ↦ Term.var (Sum.inl (Classical.choose (hv i))))
+      -- One can easily see that `φ` is quantifier-free.
       have hφ : φ.IsQF := by unfold IsQF; tauto
       have hv'' : (fun i ↦ a (Classical.choose (hv i))) = v := by
         ext x
         grind
       constructor
-      · intro h
+      · -- Suppose that `r^M(v(0), ..., v(n-1))` holds.
+        intro h
+        -- Then, `M ⊨ φ(a)`.
         have hφa : φ.Realize a := by
           unfold φ
           apply BoundedFormula.realize_rel.2
           simp only [Term.realize_var, Sum.elim_inl]
           rwa [hv'']
+        -- Since `φ` is quantifier-free, this implies `N ⊨ φ(b)` by assumption.
         apply (hab φ hφ).1 at hφa
+        -- Hence, `r^N(toFun(v(0)), ..., toFun(v(n-1)))` holds.
         unfold φ at hφa
         apply BoundedFormula.realize_rel.1 at hφa
         simp_all
-      · intro h
+      · -- On the other hand, suppose `r^N(toFun(v(0)), ..., toFun(v(n-1)))` holds.
+        intro h
+        -- Then, `N ⊨ φ(b)` by definition of `φ`.
         have hφb : φ.Realize b := by
           unfold φ
           apply BoundedFormula.realize_rel.2
           simpa
+        -- Since `φ` is quantifier-free, this implies `M ⊨ φ(a)` by assumption.
         apply (hab φ hφ).2 at hφb
+        -- Hence, `r^M(v(0), ..., v(n-1))`, which is what we wanted to show.
         unfold φ at hφb
         apply BoundedFormula.realize_rel.1 at hφb
         simp only [Term.realize_var, Sum.elim_inl] at hφb
