@@ -583,7 +583,7 @@ theorem on_formula (F : Set (L.PartialIso M N)) (hF : L.IsBackAndForthSystem M N
 `L`-structures `M` and `N`, then `M` and `N` are elementary equivalent. -/
 theorem elementarilyEquivalent_if_exists_nonempty :
   (∃ (F : Set (L.PartialIso M N)), (Nonempty F ∧ (L.IsBackAndForthSystem M N F))) →
-  L.ElementarilyEquivalent M N := by {
+  L.ElementarilyEquivalent M N := by
     -- Suppose `F` is a nonempty back-and-forth-system between `M` and `N`
     intro h
     obtain ⟨ F, ι, hF ⟩ := h
@@ -597,15 +597,13 @@ theorem elementarilyEquivalent_if_exists_nonempty :
     -- Since `F` is nonempty, there exists a partial iso `ι' ∈ F`.
     let ι' : L.PartialIso M N := ι
     have hι' : ι' ∈ F := Subtype.coe_prop ι
-    have hv : ∀ (x : Empty), v x ∈ ι'.source := by simp only [IsEmpty.forall_iff]
+    have hv : ∀ (x : Empty), v x ∈ ι'.source := by simp
     unfold Sentence.Realize
     have hv₁ : v = default := Unique.ext_iff.mp rfl
     have hv₂ : ι'.toFun ∘ v = default := by ext x; trivial
-    rw [← hv₁]
-    rw [← hv₂]
+    rw [← hv₁, ← hv₂]
     -- The goal follows from the fact that `ι'` commutes with interpretation of formulas.
     exact on_formula M N F hF φ v ι' hι' hv
-  }
 
 end BackAndForth
 
