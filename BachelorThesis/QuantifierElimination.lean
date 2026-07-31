@@ -617,18 +617,19 @@ noncomputable def toPartialIso [Nonempty M] [Nonempty N]
     source := {y | ∃ x, a x = y}
     target := {y | ∃ x, b x = y}
     /- `toFun` maps every element of `M` in the image of `a`
-    to the image under `b` of a preimage under `a`. -/
-    -- Note: `a` and `b` are not necessarily injective, so we still
-    -- have to prove that this map does not depend on the choice of the preimage under `a`.
+    to the image under `b` of a preimage under `a`.
+    Note: `a` and `b` are not necessarily injective, so we still
+    have to prove that this map does not depend on the choice
+    of the preimage under `a`. -/
     toFun := fun x ↦ by
       by_cases h : ∃ y, a y = x
       · use b (Classical.choose h)
       · rename_i hM₁ hN₁ hM₂ hN₂
         use (Classical.choice hN₂)
-    /- `invFun` maps every element of `M` in the image of `b`
-    to the image under `a` of a preimage under `b` -/
-    -- Note: Since `a` and `b` are not necessarily injective, it still remains to prove
-    -- that this map does not depend on the choice of the preimage under `b`.
+    /- `invFun` maps every element of `N` in the image of `b`
+    to the image under `a` of a preimage under `b`
+    Note: Since `a` and `b` are not necessarily injective, it still remains to prove
+    that this map does not depend on the choice of the preimage under `b`. -/
     invFun := fun x ↦ by
       by_cases h : ∃ y, b y = x
       · use a (Classical.choose h)
@@ -929,7 +930,7 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
   (∀ M N : ModelType.{u, v, max u v} T,
   L.IsBackAndForthSystem M N {f : L.PartialIso M N | Finite f.source})
   → ∀ (α : Type u) (_ : Finite α) (φ : L.Formula α),
-  ∃ ψ : L.Formula α, (ψ.IsQF ∧ T ⊨ᵇ (φ.iff ψ)) := by {
+  ∃ ψ : L.Formula α, (ψ.IsQF ∧ T ⊨ᵇ (φ.iff ψ)) := by
     -- Let `α` be a finite type and `φ` be a formula with variables in `α`.
     intro hT α _ φ
     -- Moreover, let `Sigma` be the set of quantifier-free formulas with variables in `α`.
@@ -1071,7 +1072,6 @@ theorem HasQE_on_finite_if_BackAndForth_of_finite {L : Language} (T : L.Theory) 
       have hab' := CompleteType.toPartialIso_def M N a b hab
       rw [hab']
       assumption
-  }
 
 /-- If for all models `M` and `N` of a theory `T`,
 the set of partial isomorphisms with finite domain between `M` and `N` is a back-and-forth system,
