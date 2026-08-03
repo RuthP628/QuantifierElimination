@@ -4,4 +4,5 @@ This is a formalization of the model-theoretic concept of quantifier elimination
 
 The file `SeparatingTypes.lean` contains a formalization of the Separating Types Theorem, while the file `QuantifierElimination.lean` contains a formalization of the concepts of quantifier elimination as well as a proof of a quantifier elimination criterion using back-and-forth-systems.
 
-The file `EmbeddingTests.lean` is still WIP and aims to eventually be a formalization of the standard embedding test for quantifier elimination.
+The file `Applications.lean` is still WIP and contains my current progress on formalizing that the theory of dense linear orders has quantifier elimination. Moreover, the file `EmbeddingTests.lean` was created in order to formalize the standard embedding tests as a quantifier elimination criterion, but does not contain any meaningful progress as of August 2026.
+
