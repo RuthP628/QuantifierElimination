@@ -871,9 +871,110 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
         map_fun' := by
           intros
           trivial
-        map_rel' := sorry
+        map_rel' := by
+          intro n₁ r a ha
+          cases r
+          have h : orderRel.le = @leSymb Language.order _ :=
+           ((fun a ↦ a) ∘ fun a ↦ a) rfl
+          by_cases h₁ : a 0 ∈ f.source
+          · by_cases h₂ : a 1 ∈ f.source
+            · have h₅ : (fun x ↦ if h : x = m then n else f.toFun x) ∘ a = f.toFun ∘ a := by
+                ext x
+                simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+                  Set.union_singleton, Set.mem_insert_iff, Fin.forall_fin_two, Fin.isValue,
+                  and_self, Function.comp_apply, dite_eq_ite,
+                  ite_eq_right_iff, or_true]
+                intro h₆
+                by_cases h₇ : x = 0
+                · rw [h₇] at h₆
+                  rw [h₆] at h₁
+                  simp_all
+                · have h₇ : x = 1 := Fin.eq_one_of_ne_zero x h₇
+                  rw [h₇] at h₆
+                  rw [h₆] at h₂
+                  simp_all
+              have ha : ∀ x, a x ∈ f.source := by
+                intro x
+                by_cases h : x = 0
+                · rwa [h]
+                · have h' : x = 1 := Fin.eq_one_of_ne_zero x h
+                  rwa [h']
+              constructor
+              · intro h₃
+                rw [h] at h₃
+                have h₄ := f.map_rel' leSymb a ha
+                apply h₄.1 at h₃
+                rwa [h, h₅]
+              · rw [h, h₅]
+                intro h₃
+                have h₄ := f.map_rel' leSymb a ha
+                apply h₄.2 at h₃
+                exact h₃
+            · rw [h]
+              have h₃ : a 1 = m := by specialize ha 1; exact Or.resolve_left ha h₂
+              simp only [relMap_leSymb, Fin.isValue, dite_eq_ite, Function.comp_apply]
+              rw [← h₃]
+              simp only [Fin.isValue, ↓reduceIte]
+              rw [h₃]
+              have h₄ : a 0 ≠ m := by
+                by_contra h₅
+                rw [h₅] at h₁
+                simp_all
+              simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+                Set.union_singleton, Set.mem_insert_iff, Fin.forall_fin_two, Fin.isValue, false_or,
+                or_self, or_false, and_true, not_false_eq_true, ne_eq, ↓reduceIte]
+              obtain ha₁ | ha₂ := ha
+              · constructor
+                · intro h₅
+                  specialize h_n_lt (a 0) ha₁
+                  exact Std.le_of_lt h_n_lt
+                · intro h₅
+                  specialize h_m_lt (a 0) ha₁
+                  exact Std.le_of_lt h_m_lt
+              · constructor
+                · intro h₅
+                  specialize h_n_gt (a 0) ha₂
+                  exact le_imp_le_of_lt_imp_lt (fun a_1 ↦ h_m_gt (a 0) ha₂) h₅
+                · intro h₅
+                  specialize h_m_gt (a 0) ha₂
+                  exact le_imp_le_of_lt_imp_lt (fun a_1 ↦ h_n_gt (a 0) ha₂) h₅
+          · have h₁' : a 0 = m := by specialize ha 0; exact Or.resolve_left ha h₁
+            rw [h]
+            by_cases h₂ : a 1 ∈ f.source
+            · simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+              Set.union_singleton, Set.mem_insert_iff, Fin.forall_fin_two, Fin.isValue, or_self,
+              or_false, true_and, not_false_eq_true, relMap_leSymb, dite_eq_ite,
+              Function.comp_apply, ↓reduceIte, or_true]
+              have ha₃ : a 1 ≠ m := by
+                by_contra h₃
+                rw [h₃] at h₂
+                simp_all
+              obtain ha₁ | ha₂ := h₂
+              · specialize h_n_lt (a 1) ha₁
+                specialize h_m_lt (a 1) ha₁
+                simp_all only [Fin.isValue, ne_eq, ↓reduceIte]
+                constructor
+                · intro ha₄
+                  exact le_imp_le_of_lt_imp_lt (fun a ↦ h_m_lt) ha₄
+                · intro ha₄
+                  exact le_imp_le_of_lt_imp_lt (fun a ↦ h_n_lt) ha₄
+              · specialize h_n_gt (a 1) ha₂
+                specialize h_m_gt (a 1) ha₂
+                simp_all only [Fin.isValue, ne_eq, ↓reduceIte]
+                constructor
+                · intro ha₄
+                  exact Std.le_of_lt h_n_gt
+                · intro ha₄
+                  exact Std.le_of_lt h_m_gt
+            · have h₂' : a 1 = m := by specialize ha 1; exact Or.resolve_left ha h₂
+              simp_all
       }
-      sorry
+      use g
+      unfold g
+      constructor
+      · exact Set.mem_union_right f.source rfl
+      · apply (PartialIso.le_def M N f g).2
+        grind
 
 theorem dlo_HasQE : HasQE (Language.order.dlo) := by
   apply HasQE_if_BackAndForth_of_finite
