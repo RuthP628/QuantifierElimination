@@ -547,7 +547,7 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
   [Language.order.Structure M] [Language.order.Structure N]
   [Language.order.OrderedStructure M] [Language.order.OrderedStructure N]
   [DenselyOrdered M] [DenselyOrdered N]
-  (f : Language.order.PartialIso M N) (hf₁ : Nonempty f.source) (hf₂ : Finite f.source) (m : M)
+  (f : Language.order.PartialIso M N) (hf₂ : Finite f.source) (m : M)
   (hm : (∃ m' ∈ f.source, m' < m) ∧ (∃ m' ∈ f.source, m < m')) (hm' : m ∉ f.source) :
     ∃ g : PartialIso M N, m ∈ g.source ∧ f ≤ g := by
       obtain ⟨ hm₁ , hm₂ ⟩ := hm
@@ -689,7 +689,7 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
             simp_all
         have h₅ := f.map_rel' leSymb a ha
         unfold a at h₅
-        simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, ne_eq,
+        simp_all only [orderedStructure_iff, orderLHom_order, ne_eq,
           Fin.forall_fin_two, Fin.isValue, relMap_leSymb, ↓reduceIte, one_ne_zero,
           Function.comp_apply, gt_iff_lt]
         have h₆ : lt_max_m' ≤ gt_min_m' := Std.le_of_lt h_lt_max_gt_min_m
@@ -744,7 +744,7 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
             left
             exact hm'
           · unfold a
-            simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+            simp_all only [orderedStructure_iff, orderLHom_order, not_or,
               Fin.isValue, ↓reduceDIte]
             left
             exact Finset.mem_of_max h_lt_max_m'
@@ -763,12 +763,12 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
           intro x
           by_cases h : x = 0
           · unfold a
-            simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+            simp_all only [orderedStructure_iff, orderLHom_order, not_or,
               Fin.isValue, ↓reduceDIte]
             right
             exact Finset.mem_of_min h_gt_min_m'
           · unfold a
-            simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+            simp_all only [orderedStructure_iff, orderLHom_order, not_or,
               Fin.isValue, ↓reduceDIte, or_true]
         have h := f.map_rel' leSymb a ha
         unfold a at h
@@ -786,7 +786,7 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
           intro x hx
           by_cases hx₁ : x = m
           · simp_all
-          · simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+          · simp_all only [orderedStructure_iff, orderLHom_order, not_or,
             Set.union_singleton, Set.mem_insert_iff, false_or, ↓reduceDIte]
             right
             obtain hx₂ | hx₃ := hx
@@ -798,7 +798,7 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
           intro x hx
           by_cases hx₁ : x = n
           · simp_all
-          · simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+          · simp_all only [orderedStructure_iff, orderLHom_order, not_or,
             Set.union_singleton, Set.mem_insert_iff, false_or, ↓reduceDIte,
             PartialEquiv.invFun_as_coe]
             obtain hx₂ | hx₃ := hx
@@ -822,7 +822,7 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
           intro x hx
           by_cases h : x = m
           · simp_all
-          · simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype,
+          · simp_all only [orderedStructure_iff, orderLHom_order,
             Set.union_singleton, Set.mem_insert_iff, false_or, ↓reduceDIte,
             PartialEquiv.invFun_as_coe, PartialEquiv.left_inv, dite_eq_ite, ite_eq_right_iff]
             intro hx'
@@ -835,7 +835,7 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
           intro x hx
           by_cases h : x = n
           · simp_all
-          · simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+          · simp_all only [orderedStructure_iff, orderLHom_order, not_or,
             Set.union_singleton, Set.mem_insert_iff, false_or, ↓reduceDIte,
             PartialEquiv.invFun_as_coe, PartialEquiv.right_inv, dite_eq_ite, ite_eq_right_iff]
             intro hx'
@@ -880,7 +880,7 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
           · by_cases h₂ : a 1 ∈ f.source
             · have h₅ : (fun x ↦ if h : x = m then n else f.toFun x) ∘ a = f.toFun ∘ a := by
                 ext x
-                simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+                simp_all only [orderedStructure_iff, orderLHom_order, not_or,
                   Set.union_singleton, Set.mem_insert_iff, Fin.forall_fin_two, Fin.isValue,
                   and_self, Function.comp_apply, dite_eq_ite,
                   ite_eq_right_iff, or_true]
@@ -920,7 +920,7 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
                 by_contra h₅
                 rw [h₅] at h₁
                 simp_all
-              simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+              simp_all only [orderedStructure_iff, orderLHom_order, not_or,
                 Set.union_singleton, Set.mem_insert_iff, Fin.forall_fin_two, Fin.isValue, false_or,
                 or_self, or_false, and_true, not_false_eq_true, ne_eq, ↓reduceIte]
               obtain ha₁ | ha₂ := ha
@@ -941,7 +941,7 @@ lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
           · have h₁' : a 0 = m := by specialize ha 0; exact Or.resolve_left ha h₁
             rw [h]
             by_cases h₂ : a 1 ∈ f.source
-            · simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+            · simp_all only [orderedStructure_iff, orderLHom_order, not_or,
               Set.union_singleton, Set.mem_insert_iff, Fin.forall_fin_two, Fin.isValue, or_self,
               or_false, true_and, not_false_eq_true, relMap_leSymb, dite_eq_ite,
               Function.comp_apply, ↓reduceIte, or_true]
