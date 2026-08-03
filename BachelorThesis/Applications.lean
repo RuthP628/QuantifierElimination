@@ -17,12 +17,14 @@ namespace dlo
 universe u v
 variable (L : Language.{u, v}) [L.IsOrdered]
 
+/-- The interpretation of the `≤`-symbol in a model of DLO. -/
 def le (M : Type*) [L.Structure M] [M ⊨ L.dlo] : M → M → Prop := by
   rename_i _ struc _
   intro m₁ m₂
   let v : Fin 2 → M := fun x ↦ if h : x = 0 then m₁ else m₂
   use struc.RelMap leSymb v
 
+/-- The interpretation of the `≤`-symbol in a model of DLO is reflexive. -/
 lemma le_refl (M : Type*) [L.Structure M] [M ⊨ L.dlo] :
   ∀ (a : M), (Theory.dlo.le L M) a a := by
     rename_i _ _ is_model
@@ -44,6 +46,7 @@ lemma le_refl (M : Type*) [L.Structure M] [M ⊨ L.dlo] :
         List.ofFn_inj.mp rfl
     rwa [← this]
 
+/-- The interpretation of the `≤`-symbol in a model of DLO is transitive. -/
 lemma le_trans (M : Type*) [L.Structure M] [M ⊨ L.dlo] :
   ∀ a b c : M, (Theory.dlo.le L M a b) → (Theory.dlo.le L M b c) → (Theory.dlo.le L M a c) := by
     rename_i _ _ is_model
@@ -76,6 +79,7 @@ lemma le_trans (M : Type*) [L.Structure M] [M ⊨ L.dlo] :
     rw [this₁, this₂, this₃] at h
     exact h hm₁m₂ hm₂m₃
 
+/-- The interpretation of the `≤`-symbol in a model of DLO is antisymmetric. -/
 lemma le_antisymm (M : Type*) [L.Structure M] [M ⊨ L.dlo] :
   ∀ (a b : M), dlo.le L M a b → dlo.le L M b a → a = b := by
     unfold dlo.le
@@ -105,6 +109,8 @@ lemma le_antisymm (M : Type*) [L.Structure M] [M ⊨ L.dlo] :
       dite_eq_ite, Nat.succ_eq_add_one, Nat.reduceAdd, forall_const]
     exact ((fun a ↦ hM) ∘ fun a ↦ L) L
 
+/-- Any two elements `a`, `b` in a model of DLO are comparable w.r.t.
+the interpretation of the `≤`-symbol. -/
 lemma le_total (M : Type*)  [L.Structure M] [M ⊨ L.dlo] :
   ∀ a b : M, dlo.le L M a b ∨ dlo.le L M b a := by
     intro a b
@@ -138,11 +144,14 @@ end Theory
 
 namespace order
 
+/-- Let `M`, `N` be two linear-ordered structures without a minimal element.
+Moreover, let `f : M → N` be a partial isomorphism with finite domain.
+Then, `f` can be extended to an element that is smaller than all elements in the domain of `f`. -/
 lemma dlo_PartialIso_extends_lt_of_finite_source {M : Type*} {N : Type*}
   [Nonempty M] [Nonempty N] [LinearOrder M] [LinearOrder N]
   [Language.order.Structure M] [Language.order.Structure N]
   [Language.order.OrderedStructure M] [Language.order.OrderedStructure N]
-  [DenselyOrdered M] [DenselyOrdered N] [M ⊨ Language.order.dlo] [N ⊨ Language.order.dlo]
+  [NoBotOrder M] [NoBotOrder N]
   (f : Language.order.PartialIso M N) (hf₁ : Nonempty f.source) (hf₂ : Finite f.source) (m : M)
   (hm : ∀ m' ∈ f.source, m < m') :
     ∃ g : PartialIso M N, m ∈ g.source ∧ f ≤ g := by
@@ -151,13 +160,720 @@ lemma dlo_PartialIso_extends_lt_of_finite_source {M : Type*} {N : Type*}
       have hf₃ : Finset.Nonempty source_set := by
         apply Classical.choice at hf₁
         use hf₁
-        unfold source_set
-        sorry
+        have hf₁' : (hf₁ : M) ∈ f.source := Subtype.coe_prop hf₁
+        exact (Set.Finite.mem_toFinset hf₂).mpr hf₁'
       have h_m_min := Finset.min_of_nonempty hf₃
+      -- We define `m_min'` to be the minimal element of the domain of `f`.
       obtain ⟨ m_min', h_m_min' ⟩ := h_m_min
+      have h_m_min'' : m_min' ∈ f.source := by
+        have h_m_min''₁ : m_min' ∈ source_set := Finset.mem_of_min h_m_min'
+        have h_source_set : (source_set : Set M) ⊆ f.source :=
+          Set.Finite.subset_toFinset.mp fun ⦃x⦄ a ↦ a
+        exact Set.mem_of_subset_of_mem h_source_set h_m_min''₁
+      -- Let `n_min'` be the image of `m_min'` under `f`.
+      let n_min' := f.toFun m_min'
+      have h_n_min' : n_min' ∈ f.target := by
+        unfold n_min'
+        simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype,
+          PartialEquiv.map_source]
+      -- Then, `n_min'` is the minimal element of the codomain of `f`.
+      have h_n_min'₁ : ∀ n' ∈ f.target, n_min' ≤ n' := by
+        intro n' hn'
+        let m' := f.invFun n'
+        have hm'₁ : m' ∈ f.source := f.map_target' hn'
+        have hm'₂ : ∀ m' ∈ source_set, m_min' ≤ m' :=
+          fun m' a ↦ Finset.min_le_of_eq a h_m_min'
+        have hm'₃ : m' ∈ source_set := (Set.Finite.mem_toFinset hf₂).mpr hm'₁
+        specialize hm'₂ m' hm'₃
+        have hm'₄ := f.map_rel' (@IsOrdered.leSymb Language.order _)
+          (fun x ↦ if h : x = 0 then m_min' else m')
+        have hm'₅ : ∀ (x : Fin 2), (if h : x = 0 then m_min' else m') ∈ f.source := by
+          intro x
+          by_cases hx : x = 0
+          · simp_all
+          · simp_all
+        specialize hm'₄ hm'₅
+        simp only [Fin.isValue, dite_eq_ite, relMap_leSymb, ↓reduceIte, one_ne_zero,
+          Function.comp_apply] at hm'₄
+        apply hm'₄.1 at hm'₂
+        aesop
+      -- Since the linear order on `N` does not have a minimal element,
+      -- there is `n ∈ N` that is strictly smaller than `n_min'`.
+      have hn : ∃ n : N, n < n_min' := by
+        rename_i hN
+        have hN' := hN.exists_not_ge n_min'
+        obtain ⟨ n, hn ⟩ := hN'
+        use n
+        simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_le]
+      obtain ⟨ n, hn₁ ⟩ := hn
+      -- Then, `n` is strictly smaller than all elements in the codomain of `f`.
+      have hn₂ : ∀ n' ∈ f.target, n < n' := by
+        intro n' hn'
+        specialize h_n_min'₁ n' hn'
+        exact Std.lt_of_lt_of_le hn₁ h_n_min'₁
+      -- Now, we define a partial isomorphism `g` by extending the domain of `f` to include `m`.
+      -- Here, `m` gets mapped to `n`.
+      let g : Language.order.PartialIso M N := {
+        toFun := fun x ↦ if h : x = m then n else f.toFun x
+        invFun := fun x ↦ if h : x = n then m else f.invFun x
+        source := f.source ∪ {m}
+        target := f.target ∪ {n}
+        map_source' := by
+          intro x hx
+          obtain hx₁ | hx₂ := hx
+          · have hx₃ : x ≠ m := Ne.symm (Std.ne_of_lt (hm x hx₁))
+            simp_all
+          · simp_all
+        map_target' := by
+          intro x hx
+          obtain hx₁ | hx₂ := hx
+          · have hx₃ : x ≠ n :=  Ne.symm (Std.ne_of_lt (hn₂ x hx₁))
+            simp_all
+          · simp_all
+        left_inv' := by
+          intro x hx
+          obtain hx₁ | hx₂ := hx
+          · have hx₃ : x ≠ m := Ne.symm (Std.ne_of_lt (hm x hx₁))
+            simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, ne_eq,
+              ↓reduceDIte, PartialEquiv.invFun_as_coe, PartialEquiv.left_inv, dite_eq_ite,
+              ite_eq_right_iff]
+            intro hx₄
+            have hx₅ : n ∉ f.target := by grind
+            rw [← hx₄] at hx₅
+            have hx₆ : f.toFun x ∈ f.target := f.map_source hx₁
+            contradiction
+          · simp_all
+        right_inv' := by
+          intro x hx
+          obtain hx₁ | hx₂ := hx
+          · have hx₃ : x ≠ n := Ne.symm (Std.ne_of_lt (hn₂ x hx₁))
+            simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, ne_eq,
+              ↓reduceDIte, PartialEquiv.invFun_as_coe, PartialEquiv.right_inv, dite_eq_ite,
+              ite_eq_right_iff]
+            intro hx₄
+            have hx₅ : m ∉ f.source := by grind
+            rw [← hx₄] at hx₅
+            have hx₆ : f.invFun x ∈ f.source := f.map_target hx₁
+            contradiction
+          · simp_all
+        map_fun' := by
+          intros
+          trivial
+        map_rel' := by
+          intro n₁ r a ha
+          cases r
+          by_cases ha₁ : a 0 ∈ f.source
+          · by_cases ha₂ : a 1 ∈ f.source
+            · have ha₃ : ∀ x : Fin 2, a x ∈ f.source := by
+                intro x
+                by_cases h : x = 0
+                · rw [h]
+                  exact ha₁
+                · grind
+              have ha₄ := f.map_rel' orderRel.le a ha₃
+              have ha₅ : ((fun x ↦ if h : x = m then n else f.toFun x) ∘ a) = f.toFun ∘ a := by
+                  ext x
+                  grind
+              constructor
+              · intro ha₆
+                apply ha₄.1 at ha₆
+                rwa [ha₅]
+              · intro ha₆
+                apply ha₄.2
+                rwa [← ha₅]
+            · have ha₃ : a 1 = m := Or.resolve_left (ha 1) ha₂
+              specialize hm (a 0) ha₁
+              rw [← ha₃] at hm
+              constructor
+              · intro ha₄
+                have ha₅ : orderRel.le = @IsOrdered.leSymb Language.order _ :=
+                  ((fun a ↦ a) ∘ fun a ↦ a) rfl
+                rw [ha₅] at ha₄
+                have ha₆ : a 0 ≤ a 1 := by simp_all only [orderedStructure_iff, orderLHom_order,
+                  nonempty_subtype, Fin.isValue, Set.union_singleton, Set.mem_insert_iff,
+                  Fin.forall_fin_two, or_true, true_or, and_self, relMap_leSymb]
+                grind
+              · intro ha₄
+                have ha₅ : orderRel.le = @IsOrdered.leSymb Language.order _ :=
+                 ((fun a ↦ a) ∘ fun a ↦ a) rfl
+                rw [ha₅] at ha₄
+                have ha₆ : a 0 ≠ m := by rw [← ha₃]; exact ne_of_mem_of_not_mem ha₁ ha₂
+                simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, Fin.isValue,
+                  Set.union_singleton, Set.mem_insert_iff, Fin.forall_fin_two, or_true, true_or,
+                  and_self, dite_eq_ite, relMap_leSymb, Function.comp_apply, ↓reduceIte, ne_eq,
+                  ge_iff_le]
+                have ha₇ : f.toFun (a 0) ∈ f.target :=
+                  PartialEquiv.map_source f.toPartialEquiv ha₁
+                specialize hn₂ (f.toFun (a 0)) ha₇
+                grind
+          · have ha₃ : a 0 = m := Or.resolve_left (ha 0) ha₁
+            by_cases ha₂ : a 1 ∈ f.source
+            · specialize hm (a 1) ha₂
+              rw [← ha₃] at hm
+              have ha₄ : orderRel.le = @IsOrdered.leSymb Language.order _ :=
+                ((fun a ↦ a) ∘ fun a ↦ a) rfl
+              rw [ha₄]
+              constructor
+              · intro ha₅
+                have ha₆ : a 1 ≠ m := by grind
+                simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, Fin.isValue,
+                  Set.union_singleton, Set.mem_insert_iff, Fin.forall_fin_two, true_or, or_true,
+                  and_self, relMap_leSymb, ne_eq, dite_eq_ite, Function.comp_apply, ↓reduceIte,
+                  ge_iff_le]
+                have ha₇ : f.toFun (a 1) ∈ f.target := by simp_all only [Fin.isValue,
+                  PartialEquiv.map_source]
+                specialize hn₂ (f.toFun (a 1)) ha₇
+                exact Std.le_of_lt hn₂
+              · intro ha₅
+                simp only [relMap_leSymb, Fin.isValue]
+                exact Std.le_of_lt hm
+            · have ha₄ : a 1 = m := Or.resolve_left (ha 1) ha₂
+              have ha₅ : orderRel.le = @IsOrdered.leSymb Language.order _ :=
+                ((fun a ↦ a) ∘ fun a ↦ a) rfl
+              rw [ha₅]
+              simp_all
+      }
+      use g
+      constructor
+      · exact Set.mem_union_right f.source rfl
+      · apply (PartialIso.le_def M N f g).2
+        constructor
+        · exact Set.subset_union_left
+        · intro x hx
+          grind
 
+
+/-- Let `M`, `N` be two linear-ordered structures without a maximal elment.
+Moreover, let `f : M → N` be a partial isomorphism with finite domain.
+Then, `f` can be extended to an element that is greater than all elements in the domain of `f`. -/
+lemma dlo_PartialIso_extends_gt_of_finite_source {M : Type*} {N : Type*}
+  [Nonempty M] [Nonempty N] [LinearOrder M] [LinearOrder N]
+  [Language.order.Structure M] [Language.order.Structure N]
+  [Language.order.OrderedStructure M] [Language.order.OrderedStructure N]
+  [NoTopOrder M] [NoTopOrder N]
+  (f : Language.order.PartialIso M N) (hf₁ : Nonempty f.source) (hf₂ : Finite f.source) (m : M)
+  (hm : ∀ m' ∈ f.source, m' < m) :
+    ∃ g : PartialIso M N, m ∈ g.source ∧ f ≤ g := by
+      let source_set : Finset M := Set.Finite.toFinset hf₂
+      let m_max := source_set.max
+      have hf₃ : Finset.Nonempty source_set := by
+        apply Classical.choice at hf₁
+        use hf₁
+        have hf₁' : (hf₁ : M) ∈ f.source := Subtype.coe_prop hf₁
+        exact (Set.Finite.mem_toFinset hf₂).mpr hf₁'
+      have h_m_max := Finset.max_of_nonempty hf₃
+      -- We define `m_max'` to be the maximal element of the domain of `f`.
+      obtain ⟨ m_max', h_m_max' ⟩ := h_m_max
+      have h_m_max'' : m_max' ∈ f.source := by
+        have h_m_max''₁ : m_max' ∈ source_set := Finset.mem_of_max h_m_max'
+        have h_source_set : (source_set : Set M) ⊆ f.source :=
+          Set.Finite.subset_toFinset.mp fun ⦃x⦄ a ↦ a
+        exact Set.mem_of_subset_of_mem h_source_set h_m_max''₁
+      -- Let `n_max'` be the image of `m_max'` under `f`.
+      let n_max' := f.toFun m_max'
+      have h_n_max' : n_max' ∈ f.target := by
+        unfold n_max'
+        simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype,
+          PartialEquiv.map_source]
+      -- Then, `n_max'` is the maximal element of the codomain of `f`.
+      have h_n_max'₁ : ∀ n' ∈ f.target, n' ≤ n_max' := by
+        intro n' hn'
+        let m' := f.invFun n'
+        have hm'₁ : m' ∈ f.source := f.map_target' hn'
+        have hm'₂ : ∀ m' ∈ source_set, m' ≤ m_max' :=
+          fun m' a ↦ Finset.le_max_of_eq a h_m_max'
+        have hm'₃ : m' ∈ source_set := (Set.Finite.mem_toFinset hf₂).mpr hm'₁
+        specialize hm'₂ m' hm'₃
+        have hm'₄ := f.map_rel' (@IsOrdered.leSymb Language.order _)
+          (fun x ↦ if h : x = 0 then m' else m_max')
+        have hm'₅ : ∀ (x : Fin 2), (if h : x = 0 then m' else m_max') ∈ f.source := by
+          intro x
+          by_cases hx : x = 0
+          · simp_all
+          · simp_all
+        specialize hm'₄ hm'₅
+        simp only [Fin.isValue, dite_eq_ite, relMap_leSymb, ↓reduceIte, one_ne_zero,
+          Function.comp_apply] at hm'₄
+        apply hm'₄.1 at hm'₂
+        aesop
+      -- Since the linear order on `N` does not have a maximal element,
+      -- there is `n ∈ N` that is strictly greater than `n_min'`.
+      have hn : ∃ n : N, n_max' < n := by
+        rename_i hN
+        have hN' := hN.exists_not_le n_max'
+        obtain ⟨ n, hn ⟩ := hN'
+        use n
+        simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_le]
+      obtain ⟨ n, hn₁ ⟩ := hn
+      -- Then, `n` is strictly greater than all elements in the codomain of `f`.
+      have hn₂ : ∀ n' ∈ f.target, n' < n := by
+        intro n' hn'
+        specialize h_n_max'₁ n' hn'
+        exact Std.lt_of_le_of_lt h_n_max'₁ hn₁
+      -- Now, we define a partial isomorphism `g` by extending the domain of `f` to include `m`.
+      -- Here, `m` gets mapped to `n`.
+      let g : Language.order.PartialIso M N := {
+        toFun := fun x ↦ if h : x = m then n else f.toFun x
+        invFun := fun x ↦ if h : x = n then m else f.invFun x
+        source := f.source ∪ {m}
+        target := f.target ∪ {n}
+        map_source' := by
+          intro x hx
+          obtain hx₁ | hx₂ := hx
+          · have hx₃ : x ≠ m := Std.ne_of_lt (hm x hx₁)
+            simp_all
+          · simp_all
+        map_target' := by
+          intro x hx
+          obtain hx₁ | hx₂ := hx
+          · have hx₃ : x ≠ n :=  Std.ne_of_lt (hn₂ x hx₁)
+            simp_all
+          · simp_all
+        left_inv' := by
+          intro x hx
+          obtain hx₁ | hx₂ := hx
+          · have hx₃ : x ≠ m := Std.ne_of_lt (hm x hx₁)
+            simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, ne_eq,
+              ↓reduceDIte, PartialEquiv.invFun_as_coe, PartialEquiv.left_inv, dite_eq_ite,
+              ite_eq_right_iff]
+            intro hx₄
+            have hx₅ : n ∉ f.target := by grind
+            rw [← hx₄] at hx₅
+            have hx₆ : f.toFun x ∈ f.target := f.map_source hx₁
+            contradiction
+          · simp_all
+        right_inv' := by
+          intro x hx
+          obtain hx₁ | hx₂ := hx
+          · have hx₃ : x ≠ n := Std.ne_of_lt (hn₂ x hx₁)
+            simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, ne_eq,
+              ↓reduceDIte, PartialEquiv.invFun_as_coe, PartialEquiv.right_inv, dite_eq_ite,
+              ite_eq_right_iff]
+            intro hx₄
+            have hx₅ : m ∉ f.source := by grind
+            rw [← hx₄] at hx₅
+            have hx₆ : f.invFun x ∈ f.source := f.map_target hx₁
+            contradiction
+          · simp_all
+        map_fun' := by
+          intros
+          trivial
+        map_rel' := by
+          intro n₁ r a ha
+          cases r
+          by_cases ha₁ : a 0 ∈ f.source
+          · by_cases ha₂ : a 1 ∈ f.source
+            · have ha₃ : ∀ x : Fin 2, a x ∈ f.source := by
+                intro x
+                by_cases h : x = 0
+                · rw [h]
+                  exact ha₁
+                · grind
+              have ha₄ := f.map_rel' orderRel.le a ha₃
+              have ha₅ : ((fun x ↦ if h : x = m then n else f.toFun x) ∘ a) = f.toFun ∘ a := by
+                  ext x
+                  grind
+              constructor
+              · intro ha₆
+                apply ha₄.1 at ha₆
+                rwa [ha₅]
+              · intro ha₆
+                apply ha₄.2
+                rwa [← ha₅]
+            · have ha₃ : a 1 = m := Or.resolve_left (ha 1) ha₂
+              specialize hm (a 0) ha₁
+              have ha₄ : orderRel.le = @IsOrdered.leSymb Language.order _ :=
+                 ((fun a ↦ a) ∘ fun a ↦ a) rfl
+              rw [ha₄]
+              constructor
+              · intro ha₅
+                have ha₆ : a 0 ≠ m := Std.ne_of_lt hm
+                simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, Fin.isValue,
+                  Set.union_singleton, Set.mem_insert_iff, Fin.forall_fin_two, or_true, true_or,
+                  and_self, relMap_leSymb, ne_eq, dite_eq_ite, Function.comp_apply, ↓reduceIte,
+                  ge_iff_le]
+                have ha₇ : f.toFun (a 0) ∈ f.target :=
+                  PartialEquiv.map_source f.toPartialEquiv ha₁
+                specialize hn₂ (f.toFun (a 0)) ha₇
+                exact Std.le_of_lt hn₂
+              · intro ha₅
+                simp only [relMap_leSymb, Fin.isValue]
+                rw [ha₃]
+                exact Std.le_of_lt hm
+          · have ha₃ : a 0 = m := Or.resolve_left (ha 0) ha₁
+            by_cases ha₂ : a 1 ∈ f.source
+            · specialize hm (a 1) ha₂
+              rw [← ha₃] at hm
+              have ha₄ : orderRel.le = @IsOrdered.leSymb Language.order _ :=
+                ((fun a ↦ a) ∘ fun a ↦ a) rfl
+              rw [ha₄]
+              constructor
+              · intro ha₅
+                simp only [relMap_leSymb, Fin.isValue] at ha₅
+                grind
+              · intro ha₅
+                rw [ha₃] at hm
+                have ha₆ : a 1 ≠ m := Std.ne_of_lt hm
+                simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, Fin.isValue,
+                  Set.union_singleton, Set.mem_insert_iff, Fin.forall_fin_two, true_or, or_true,
+                  and_self, dite_eq_ite, relMap_leSymb, Function.comp_apply, ↓reduceIte, ne_eq,
+                  ge_iff_le]
+                have ha₇ : f.toFun (a 1) ∈ f.target :=
+                  PartialEquiv.map_source f.toPartialEquiv ha₂
+                specialize hn₂ (f.toFun (a 1)) ha₇
+                exact le_imp_le_of_lt_imp_lt (fun a ↦ hn₂) ha₅
+            · have ha₄ : a 1 = m := Or.resolve_left (ha 1) ha₂
+              have ha₅ : orderRel.le = @IsOrdered.leSymb Language.order _ :=
+                ((fun a ↦ a) ∘ fun a ↦ a) rfl
+              rw [ha₅]
+              simp_all
+      }
+      use g
+      constructor
+      · exact Set.mem_union_right f.source rfl
+      · apply (PartialIso.le_def M N f g).2
+        constructor
+        · exact Set.subset_union_left
+        · intro x hx
+          grind
+
+/-- Let `M`, `N` be two densely-ordered structures.
+Moreover, let `f : M → N` be a partial isomorphism with finite domain.
+Then, `f` can be extended to an element that is
+neither greater than all elements in the domain of `f`
+nor smaller than all elements in the domain of `f`. -/
+lemma dlo_PartialIso_extends_between_of_finite_source {M : Type*} {N : Type*}
+  [Nonempty M] [Nonempty N] [LinearOrder M] [LinearOrder N]
+  [Language.order.Structure M] [Language.order.Structure N]
+  [Language.order.OrderedStructure M] [Language.order.OrderedStructure N]
+  [DenselyOrdered M] [DenselyOrdered N]
+  (f : Language.order.PartialIso M N) (hf₁ : Nonempty f.source) (hf₂ : Finite f.source) (m : M)
+  (hm : (∃ m' ∈ f.source, m' < m) ∧ (∃ m' ∈ f.source, m < m')) (hm' : m ∉ f.source) :
+    ∃ g : PartialIso M N, m ∈ g.source ∧ f ≤ g := by
+      obtain ⟨ hm₁ , hm₂ ⟩ := hm
+      let lt_set : Set M := {x | x ∈ f.source ∧ x < m}
+      let gt_set : Set M := {x | x ∈ f.source ∧ m < x}
+      have h_lt_set := (Finite.Set.finite_sep f.source fun a ↦ a < m)
+      have h_gt_set := Finite.Set.finite_sep f.source (LT.lt m)
+      let lt_finset := Set.Finite.toFinset h_lt_set
+      let gt_finset := Set.Finite.toFinset h_gt_set
+      let lt_max_m := lt_finset.max
+      let gt_min_m := gt_finset.min
+      have h_lt₁ : Finset.Nonempty lt_finset := by
+        obtain ⟨ m₁, hm₁ ⟩ := hm₁
+        have hm₁' : m₁ ∈ lt_set := by
+          unfold lt_set
+          simp_all
+        use m₁
+        exact (Set.Finite.mem_toFinset (Finite.Set.finite_sep f.source fun a ↦ a < m)).mpr hm₁
+      have h_gt₁ : Finset.Nonempty gt_finset := by
+        obtain ⟨ m₂, hm₂ ⟩ := hm₂
+        have hm₂' : m₂ ∈ gt_set := by
+          unfold gt_set
+          simp_all
+        use m₂
+        exact (Set.Finite.mem_toFinset h_gt_set).mpr hm₂
+      have h_lt_max_m := Finset.max_of_nonempty h_lt₁
+      have h_gt_min_m := Finset.min_of_nonempty h_gt₁
+      obtain ⟨ lt_max_m', h_lt_max_m' ⟩ := h_lt_max_m
+      obtain ⟨ gt_min_m', h_gt_min_m' ⟩ := h_gt_min_m
+      have h_lt_max_m'₁ : ∀ m' ∈ lt_finset, m' ≤ lt_max_m' := by
+        intro m' hm'
+        exact Finset.le_max_of_eq hm' h_lt_max_m'
+      have h_lt_min_m'₁ : ∀ m' ∈ gt_finset, gt_min_m' ≤ m' := by
+        intro m' hm'
+        exact Finset.min_le_of_eq hm' h_gt_min_m'
+      have h_lt_finset_lt_set : (lt_finset : Set M) ⊆ lt_set :=
+        Set.Finite.subset_toFinset.mp fun ⦃x⦄ a ↦ a
+      have h_gt_finset_gt_set : (gt_finset : Set M) ⊆ gt_set :=
+        Set.Finite.subset_toFinset.mp fun ⦃x⦄ a ↦ a
+      have h_lt_finset_f_source : (lt_finset : Set M) ⊆ f.source := by
+        intro m' hm'
+        apply h_lt_finset_lt_set at hm'
+        unfold lt_set at hm'
+        simp only [Set.mem_ofPred_eq] at hm'
+        exact hm'.1
+      have h_gt_finset_f_source : (gt_finset : Set M) ⊆ f.source := by
+        intro m' hm'
+        apply h_gt_finset_gt_set at hm'
+        unfold gt_set at hm'
+        simp only [Set.mem_ofPred_eq] at hm'
+        exact hm'.1
+      have h_f_source : ∀ m' : M, m' ∈ f.source ↔ (m' ∈ lt_finset ∨ m' ∈ gt_finset) := by
+        intro m'
+        by_cases h₁ : m' < m
+        · constructor
+          · intro h₂
+            left
+            have h₃ : m' ∈ lt_set := by
+              unfold lt_set
+              simp only [Set.mem_ofPred_eq]
+              exact ⟨ h₂, h₁ ⟩
+            exact (Set.Finite.mem_toFinset h_lt_set).mpr h₃
+          · intro h₂
+            obtain h₃ | h₄ := h₂
+            · have h₄ : m' ∈ lt_set := Set.mem_sep (h_lt_finset_f_source h₃) h₁
+              unfold lt_set at h₄
+              simp only [Set.mem_ofPred_eq] at h₄
+              exact h₄.1
+            · have h₅ : m' ∈ gt_set := Set.mem_sep_iff.mpr (h_gt_finset_gt_set h₄)
+              unfold gt_set at h₅
+              simp only [Set.mem_ofPred_eq] at h₅
+              exact h₅.1
+        · constructor
+          · intro h₂
+            right
+            have h₃ : m' ∈ gt_set := by
+              unfold gt_set
+              simp only [Set.mem_ofPred_eq]
+              constructor
+              · exact h₂
+              · have h₄ : m ≠ m' := Ne.symm (ne_of_mem_of_not_mem h₂ hm')
+                grind
+            exact (Set.Finite.mem_toFinset h_gt_set).mpr h₃
+          · intro h₂
+            obtain h₃ | h₄ := h₂
+            · have h₄ : m' ∈ lt_set := Set.mem_sep_iff.mpr (h_lt_finset_lt_set h₃)
+              unfold lt_set at h₄
+              simp only [Set.mem_ofPred_eq] at h₄
+              exact h₄.1
+            · have h₅ : m' ∈ gt_set := Set.mem_sep_iff.mpr (h_gt_finset_gt_set h₄)
+              unfold gt_set at h₅
+              simp only [Set.mem_ofPred_eq] at h₅
+              exact h₅.1
+      have h_m_lt : ∀ m' ∈ lt_finset, m' < m := by
+        intro m' hm'
+        apply h_lt_finset_lt_set at hm'
+        unfold lt_set at hm'
+        simp only [Set.mem_ofPred_eq] at hm'
+        exact hm'.2
+      have h_m_gt : ∀ m' ∈ gt_finset, m < m' := by
+        intro m' hm'
+        apply h_gt_finset_gt_set at hm'
+        unfold gt_set at hm'
+        simp only [Set.mem_ofPred_eq] at hm'
+        exact hm'.2
+      have h_m_lt_max_m' : lt_max_m' < m := by
+        have h : lt_max_m' ∈ lt_finset := Finset.mem_of_max h_lt_max_m'
+        exact h_m_lt lt_max_m' h
+      have h_m_gt_min_m' : m < gt_min_m' := by
+        have h : gt_min_m' ∈ gt_finset := Finset.mem_of_min h_gt_min_m'
+        exact h_m_gt gt_min_m' h
+      have h_lt_max_gt_min_m : lt_max_m' < gt_min_m' := by
+        exact Std.lt_trans h_m_lt_max_m' h_m_gt_min_m'
+      let lt_max_n' := f.toFun lt_max_m'
+      let gt_min_n' := f.toFun gt_min_m'
+      have h_lt_max_gt_min_n : lt_max_n' < gt_min_n' := by
+        have h₁ : lt_max_m' ∈ f.source := by
+          have h : lt_max_m' ∈ lt_finset := Finset.mem_of_max h_lt_max_m'
+          exact Set.mem_of_subset_of_mem h_lt_finset_f_source h
+        have h₂ : gt_min_m' ∈ f.source := by
+          have h : gt_min_m' ∈ gt_finset := Finset.mem_of_min h_gt_min_m'
+          exact Set.mem_of_subset_of_mem h_gt_finset_f_source h
+        have h₃ : lt_max_m' ≠ gt_min_m' := by exact Std.ne_of_lt h_lt_max_gt_min_m
+        have h₄ : lt_max_n' ≠ gt_min_n' := by
+          unfold lt_max_n'; unfold gt_min_n'
+          by_contra h₅
+          apply h₃
+          calc
+          lt_max_m' = f.invFun (f.toFun lt_max_m') := Eq.symm (f.left_inv' h₁)
+          _ = f.invFun (f.toFun gt_min_m') := by rw [h₅]
+          _ = gt_min_m' := f.left_inv' h₂
+        let a : Fin 2 → M := fun x ↦ if x = 0 then lt_max_m' else gt_min_m'
+        have ha : ∀ x, a x ∈ f.source := by
+          intro x
+          by_cases h : x = 0
+          · unfold a
+            simp_all
+          · unfold a
+            simp_all
+        have h₅ := f.map_rel' leSymb a ha
+        unfold a at h₅
+        simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, ne_eq,
+          Fin.forall_fin_two, Fin.isValue, relMap_leSymb, ↓reduceIte, one_ne_zero,
+          Function.comp_apply, gt_iff_lt]
+        have h₆ : lt_max_m' ≤ gt_min_m' := Std.le_of_lt h_lt_max_gt_min_m
+        apply h₅.1 at h₆
+        unfold lt_max_n'; unfold gt_min_n'
+        unfold lt_max_n' at h₄; unfold gt_min_n' at h₄
+        exact Std.lt_of_le_of_ne h₆ h₄
+      have h_lt_max_gt_min_n' : ∃ n, lt_max_n' < n ∧ n < gt_min_n' :=
+        exists_between h_lt_max_gt_min_n
+      obtain ⟨ n, hn₁, hn₂ ⟩ := h_lt_max_gt_min_n'
+      have h_f_target : ∀ n', n' ∈ f.target ↔
+        ((∃ m' ∈ lt_finset, f.toFun m' = n') ∨ (∃ m' ∈ gt_finset, f.toFun m' = n')) := by
+          intro n'
+          constructor
+          · intro hn'
+            have hn'₁ := f.map_target' hn'
+            apply (h_f_source (f.invFun n')).1 at hn'₁
+            obtain hn'₂ | hn'₃ := hn'₁
+            · left
+              use f.invFun n'
+              exact ⟨ hn'₂, f.right_inv' hn' ⟩
+            · right
+              use f.invFun n'
+              exact ⟨ hn'₃, f.right_inv' hn' ⟩
+          · intro hn'
+            obtain hn'₁ | hn'₂ := hn'
+            · obtain ⟨ m', hm'₁, hm'₂ ⟩ := hn'₁
+              specialize h_f_source m'
+              have hm'₃ : m' ∈ f.source :=
+                Set.mem_of_subset_of_mem h_lt_finset_f_source hm'₁
+              have hm'₄ := f.map_source' hm'₃
+              rw [hm'₂] at hm'₄
+              exact hm'₄
+            · obtain ⟨ m', hm'₁, hm'₂ ⟩ := hn'₂
+              specialize h_f_source m'
+              have hm'₃ : m' ∈ f.source :=
+                Set.mem_of_subset_of_mem h_gt_finset_f_source hm'₁
+              have hm'₄ := f.map_source' hm'₃
+              rw [hm'₂] at hm'₄
+              exact hm'₄
+      have h_n_lt : ∀ m' ∈ lt_finset, f.toFun m' < n := by
+        intro m' hm'
+        specialize h_lt_max_m'₁ m' hm'
+        let a : Fin 2 → M := fun x ↦ if h : x = 0 then m' else lt_max_m'
+        have ha : ∀ x, a x ∈ f.source := by
+          intro x
+          by_cases h : x = 0
+          · rw [h]
+            unfold a
+            simp only [Fin.isValue, ↓reduceDIte]
+            apply (h_f_source m').2
+            left
+            exact hm'
+          · unfold a
+            simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+              Fin.isValue, ↓reduceDIte]
+            left
+            exact Finset.mem_of_max h_lt_max_m'
+        have h := f.map_rel' leSymb a ha
+        unfold a at h
+        simp only [Fin.isValue, dite_eq_ite, relMap_leSymb, ↓reduceIte, one_ne_zero,
+          Function.comp_apply] at h
+        apply h.1 at h_lt_max_m'₁
+        unfold lt_max_n' at hn₁
+        exact Std.lt_of_le_of_lt h_lt_max_m'₁ hn₁
+      have h_n_gt : ∀ m' ∈ gt_finset, n < f.toFun m' := by
+        intro m' hm'
+        specialize h_lt_min_m'₁ m' hm'
+        let a : Fin 2 → M := fun x ↦ if h : x = 0 then gt_min_m' else m'
+        have ha : ∀ x, a x ∈ f.source := by
+          intro x
+          by_cases h : x = 0
+          · unfold a
+            simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+              Fin.isValue, ↓reduceDIte]
+            right
+            exact Finset.mem_of_min h_gt_min_m'
+          · unfold a
+            simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+              Fin.isValue, ↓reduceDIte, or_true]
+        have h := f.map_rel' leSymb a ha
+        unfold a at h
+        simp only [Fin.isValue, dite_eq_ite, relMap_leSymb, ↓reduceIte, one_ne_zero,
+          Function.comp_apply] at h
+        apply h.1 at h_lt_min_m'₁
+        unfold gt_min_n' at hn₂
+        exact Std.lt_of_lt_of_le hn₂ h_lt_min_m'₁
+      let g : Language.order.PartialIso M N := {
+        toFun := fun x ↦ (if h : x = m then n else f.toFun x)
+        invFun := fun x ↦ (if h : x = n then m else f.invFun x)
+        source := f.source ∪ {m}
+        target := f.target ∪ {n}
+        map_source' := by
+          intro x hx
+          by_cases hx₁ : x = m
+          · simp_all
+          · simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+            Set.union_singleton, Set.mem_insert_iff, false_or, ↓reduceDIte]
+            right
+            obtain hx₂ | hx₃ := hx
+            · left
+              use x
+            · right
+              use x
+        map_target' := by
+          intro x hx
+          by_cases hx₁ : x = n
+          · simp_all
+          · simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+            Set.union_singleton, Set.mem_insert_iff, false_or, ↓reduceDIte,
+            PartialEquiv.invFun_as_coe]
+            obtain hx₂ | hx₃ := hx
+            · obtain ⟨ m', hm'₁, hm'₂ ⟩ := hx₂
+              have hx₃ : m' = f.invFun x := by
+                rw [← hm'₂]
+                exact Eq.symm (f.left_inv' (h_lt_finset_f_source hm'₁))
+              rw [hx₃] at hm'₁
+              right
+              left
+              exact hm'₁
+            · obtain ⟨ m', hm'₁, hm'₂ ⟩ := hx₃
+              have hx₄ : m' = f.invFun x := by
+                rw [← hm'₂]
+                exact Eq.symm (f.left_inv' (h_gt_finset_f_source hm'₁))
+              rw [hx₄] at hm'₁
+              right
+              right
+              exact hm'₁
+        left_inv' := by
+          intro x hx
+          by_cases h : x = m
+          · simp_all
+          · simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype,
+            Set.union_singleton, Set.mem_insert_iff, false_or, ↓reduceDIte,
+            PartialEquiv.invFun_as_coe, PartialEquiv.left_inv, dite_eq_ite, ite_eq_right_iff]
+            intro hx'
+            obtain hx₁ | hx₂ := hx
+            · specialize h_n_lt x hx₁
+              grind
+            · specialize h_n_gt x hx₂
+              grind
+        right_inv' := by
+          intro x hx
+          by_cases h : x = n
+          · simp_all
+          · simp_all only [orderedStructure_iff, orderLHom_order, nonempty_subtype, not_or,
+            Set.union_singleton, Set.mem_insert_iff, false_or, ↓reduceDIte,
+            PartialEquiv.invFun_as_coe, PartialEquiv.right_inv, dite_eq_ite, ite_eq_right_iff]
+            intro hx'
+            obtain hx₁ | hx₂ := hx
+            · obtain ⟨ m', hm'₁, hm'₂ ⟩ := hx₁
+              specialize h_f_source m'
+              have hm'₃ : m' ∈ lt_finset ∨ m' ∈ gt_finset := by
+                left
+                exact hm'₁
+              apply h_f_source.2 at hm'₃
+              rw [← hm'₂] at hx'
+              have hm'₄ := f.left_inv' hm'₃
+              have hm'₅ : m' = m := by
+                rw [← hm'₄, ← hx']
+                rfl
+              rw [hm'₅] at hm'₁
+              specialize h_m_lt m hm'₁
+              simp_all
+            · obtain ⟨ m', hm'₁, hm'₂ ⟩ := hx₂
+              specialize h_f_source m'
+              have hm'₃ : m' ∈ lt_finset ∨ m' ∈ gt_finset := by
+                right
+                exact hm'₁
+              apply h_f_source.2 at hm'₃
+              rw [← hm'₂] at hx'
+              have hm'₄ := f.left_inv' hm'₃
+              have hm'₅ : m' = m := by
+                rw [← hm'₄, ← hx']
+                rfl
+              rw [hm'₅] at hm'₁
+              specialize h_m_gt m hm'₁
+              simp_all
+        map_fun' := by
+          intros
+          trivial
+        map_rel' := sorry
+      }
       sorry
-
 
 theorem dlo_HasQE : HasQE (Language.order.dlo) := by
   apply HasQE_if_BackAndForth_of_finite
