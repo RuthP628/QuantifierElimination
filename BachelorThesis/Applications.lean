@@ -1039,72 +1039,18 @@ theorem dlo_HasQE : HasQE (Language.order.dlo) := by
   }
   have hM := denselyOrdered_of_dlo Language.order M
   have hN := denselyOrdered_of_dlo Language.order N
+  have hM₁ := noTopOrder_of_dlo Language.order M
+  have hN₁ := noTopOrder_of_dlo Language.order N
+  have hM₂ := noBotOrder_of_dlo Language.order M
+  have hN₂ := noBotOrder_of_dlo Language.order M
   have hM' : Nonempty M := M.nonempty'
   have hN' : Nonempty N := N.nonempty'
   unfold IsBackAndForthSystem
   constructor
   · intro f hf m
-    simp only [Set.mem_ofPred_eq] at hf
-    let lt_set : Set M := {x | x ∈ f.source ∧ x < m}
-    let gt_set : Set M := {x | x ∈ f.source ∧ m < x}
-    let lt_finset : Finset M := Set.Finite.toFinset (Finite.Set.finite_sep f.source fun a ↦ a < m)
-    let gt_finset : Finset M := Set.Finite.toFinset (Finite.Set.finite_sep f.source (LT.lt m))
-    by_cases hm : m ∈ f.source
-    · use f
-      constructor
-      · exact hf
-      · constructor
-        · exact hm
-        · exact PartialIso.le_refl M N f
-    · by_cases h₁ : Nonempty lt_finset
-      · by_cases h₂ : Nonempty gt_finset
-        · sorry
-        · sorry
-      · by_cases h₃ : Nonempty gt_finset
-        · sorry
-        · apply Classical.choice at hN'
-          let g : Language.order.PartialIso M N := {
-            source := {m}
-            target := {hN'}
-            toFun := fun x ↦ hN'
-            invFun := fun x ↦ m
-            map_source' := by intros; simp
-            map_target' := by intros; simp
-            left_inv' := by intros; simp_all
-            right_inv' := by intros; simp_all
-            map_fun' := by intros; trivial
-            map_rel' := by
-              intro n r a ha
-              unfold Language.order at r
-              let r' : orderRel n := r
-              cases r'
-              have hr : r = @IsOrdered.leSymb Language.order _ := by
-                cases r
-                exact ((fun a ↦ a) ∘ fun a ↦ a) rfl
-              rw [hr]
-              simp_all only [nonempty_subtype, not_exists, Set.mem_singleton_iff,
-                Fin.forall_fin_two, Fin.isValue, relMap_leSymb, Std.le_refl, Function.comp_apply]
-          }
-          use g
-          constructor
-          · simp only [Set.mem_ofPred_eq]
-            unfold g
-            exact Finite.of_subsingleton
-          constructor
-          · unfold g
-            exact Set.mem_singleton m
-          · apply (PartialIso.le_def M N f g).2
-            have hf : ¬ ∃ x, x ∈ f.source := by
-              by_contra h
-              obtain ⟨ x, hx ⟩ := h
-              by_cases hx₁ : x < m
-              · have hx₁' : x ∈ lt_set := by
-                  unfold lt_set
-                  sorry
-                sorry
-              sorry
-            sorry
+    sorry
   · sorry
+
 end order
 end Language
 end FirstOrder
