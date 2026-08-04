@@ -103,7 +103,7 @@ namespace BackAndForth
 
 /-- The domain of any element of a back-and-forth-system `F` between `M` and `N`
 can be extended to include any finite number of elements of `M`. -/
-lemma back_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
+lemma forth_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
   (L.IsBackAndForthSystem M N F) →
   ∀ f ∈ F, ∀ (v : Fin n → M), ∃ g ∈ F, (∀ (a : Fin n), v a ∈ g.source) ∧ f ≤ g := by {
     intro hF
@@ -156,7 +156,7 @@ lemma back_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
 
 /-- The codomain of any element of a back-and-forth-system `F` between `M` and `N`
 can be extended to include any finite number of elements of `N`. -/
-lemma forth_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
+lemma back_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
   (L.IsBackAndForthSystem M N F) →
   (∀ f ∈ F, ∀ (v : Fin n → N), ∃ g ∈ F, (∀ (a : Fin n), v a ∈ g.target) ∧ f ≤ g) := by {
     intro hF
@@ -241,7 +241,7 @@ lemma on_term (F : Set (L.PartialIso M N)) (hF : L.IsBackAndForthSystem M N F) (
     rename_i l f ts ih v ι hι hv₁ hv₂ m hm
     -- Then, note that there is an extension `ι' ∈ F` such that `(ts(i)).realize v` is in the
     -- domain of `ι'` for all `0 ≤ i ≤ n-1`.
-    have hι' := back_extends_finite M N F l hF ι hι (fun i ↦ ((ts i).realize v))
+    have hι' := forth_extends_finite M N F l hF ι hι (fun i ↦ ((ts i).realize v))
     obtain ⟨ ι', hι'₁, hι'₂, hι'₃ ⟩ := hι'
     apply (PartialIso.le_def M N ι ι').1 at hι'₃
     obtain ⟨ hι'₃, hι'₄ ⟩ := hι'₃
@@ -376,7 +376,7 @@ theorem on_boundedFormula {n : ℕ} (F : Set (L.PartialIso M N)) (hF : L.IsBackA
         exact ⟨ hv, hxs ⟩
       -- Then, there exists `ι' ∈ F` extending `ι`s.t. `(ts i)^M(v,xs)`
       -- is in the domain of `ι'` for all `0 ≤ i ≤ l-1`.
-      have hι' := back_extends_finite M N F l hF ι hι (fun i ↦ (ts i).realize (Sum.elim v xs))
+      have hι' := forth_extends_finite M N F l hF ι hι (fun i ↦ (ts i).realize (Sum.elim v xs))
       obtain ⟨ ι', hι'₁, hι'₂, hι'₃ ⟩ := hι'
       -- Since `ι'` is a partial isomorphism, it commutes with interpretation of `R`...
       have hι'₄ := ι'.map_rel' R (fun i ↦ (ts i).realize (Sum.elim v xs)) hι'₂
