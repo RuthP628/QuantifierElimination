@@ -108,7 +108,7 @@ lemma forth_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
   ∀ f ∈ F, ∀ (v : Fin n → M), ∃ g ∈ F, (∀ (a : Fin n), v a ∈ g.source) ∧ f ≤ g := by {
     intro hF
     unfold IsBackAndForthSystem at hF
-    obtain ⟨ back, forth ⟩ := hF
+    obtain ⟨ forth, back ⟩ := hF
     -- We show the statement by induction over the number of elements `n`
     -- to which we want to extend the domain.
     induction n with
@@ -134,7 +134,7 @@ lemma forth_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
       specialize ih f hf v'
       obtain ⟨ g, hg₁, hg₂, hg₃ ⟩ := ih
       -- Moreover, by `back`, there is `g' ∈ F` extending `g` s.t. `v(n)` is in the domain of `g'`
-      let hg₄ := back g hg₁ (v ⟨ n, by norm_num ⟩ )
+      let hg₄ := forth g hg₁ (v ⟨ n, by norm_num ⟩ )
       obtain ⟨ g', hg'₁, hg'₂, hg'₃ ⟩ := hg₄
       -- Then, one can easily see that `g'` has the desired property.
       use g'
@@ -161,7 +161,7 @@ lemma back_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
   (∀ f ∈ F, ∀ (v : Fin n → N), ∃ g ∈ F, (∀ (a : Fin n), v a ∈ g.target) ∧ f ≤ g) := by {
     intro hF
     unfold IsBackAndForthSystem at hF
-    obtain ⟨ back, forth ⟩ := hF
+    obtain ⟨ forth, back ⟩ := hF
     -- We show the statement by induction over the number of elements `n`
     -- to which we want to extend the codomain.
     induction n with
@@ -188,7 +188,7 @@ lemma back_extends_finite (F : Set (L.PartialIso M N)) (n : ℕ) :
       obtain ⟨ g, hg₁, hg₂, hg₃ ⟩ := ih
       -- Moreover, by `forth`, there is `g' ∈ F` extending `g`
       -- s.t. `v(n)` is in the codomain of `g'`
-      let hg₄ := forth g hg₁ (v ⟨ n, by norm_num ⟩ )
+      let hg₄ := back g hg₁ (v ⟨ n, by norm_num ⟩ )
       obtain ⟨ g', hg'₁, hg'₂, hg'₃ ⟩ := hg₄
       -- Then, one can easily see that `g'` has the desired property.
       use g'
