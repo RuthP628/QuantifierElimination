@@ -25,7 +25,8 @@ namespace Theory
 /-- A theory `T` has quantifier-elimination if in every model of it,
 every L-formula is equivalent to a quantifier-free L-formula. -/
 def HasQE {L : Language} (T : L.Theory) : Prop :=
-  ∀ (α : Type*) (_ : DecidableEq α) (φ : L.Formula α),
+  ∀ (α : Type*) --(_ : DecidableEq α) 
+  (φ : L.Formula α),
   ∃ ψ : L.Formula α, (ψ.IsQF ∧ T ⊨ᵇ (φ.iff ψ))
 
 end Theory
@@ -1082,7 +1083,8 @@ theorem HasQE_if_BackAndForth_of_finite {L : Language} (T : L.Theory) :
   → T.HasQE := by
     -- Let `φ` be an arbitrary `L`-formula with variables in a type `α` with decidable equality.
     unfold HasQE
-    intro hT α _ φ
+    intro hT α φ
+    classical
     have h₁ : @SetLike.coe (Finset α) α Finset.instSetLike φ.freeVarFinset
       ⊆ @SetLike.coe (Finset α) α Finset.instSetLike φ.freeVarFinset := by trivial
     let f := Set.inclusion h₁
